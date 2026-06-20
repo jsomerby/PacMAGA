@@ -1,0 +1,4 @@
+# PacMAGA is a single self-contained static HTML file — no build step.
+[build]
+  publish = "."
+  command = ""
