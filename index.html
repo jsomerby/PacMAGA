@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>PacMAGA</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
@@ -11,7 +15,7 @@ html, body {
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   overflow:hidden; font-family:'Courier New', monospace; user-select:none;
 }
-#gameCanvas { display:block; image-rendering:pixelated; image-rendering:crisp-edges; max-width:100vw; max-height:100vh; }
+#gameCanvas { display:block; max-width:100vw; max-height:100vh; touch-action:none; }
 
 /* ════ Landing / "Insert Coin" screen — faithful to the original ════ */
 #landing{
@@ -95,6 +99,26 @@ html, body {
   z-index:200;display:flex;align-items:center;justify-content:center;
   font-family:'Press Start 2P','Courier New',monospace;font-size:22px;color:#FFD700;letter-spacing:4px;}
 #landing .go-overlay.active{opacity:1;pointer-events:all;}
+/* allow the coin screen to scroll if it ever overflows a small screen */
+#landing{ overflow:auto; padding:16px 0; -webkit-overflow-scrolling:touch; }
+#landing .container{ width:100%; }
+/* narrow phones (portrait) */
+@media (max-width:430px){
+  #landing .container{ gap:20px; }
+  #landing .machine{ min-width:0; width:92vw; padding:20px 18px; gap:14px; }
+  #landing .logo-img{ width:86vw; }
+  #landing .subtitle{ font-size:8px; }
+}
+/* short / landscape phones — pack it in vertically so it all fits */
+@media (max-height:560px){
+  #landing{ justify-content:flex-start; }
+  #landing .container{ gap:12px; }
+  #landing .logo-img{ width:min(60vw,360px); padding-top:4px; }
+  #landing .machine{ padding:14px 22px; gap:10px; }
+  #landing .coin-track{ height:54px; }
+  #landing .btn-insert{ padding:10px 16px; }
+  #landing .ticker{ display:none; }
+}
 </style>
 </head>
 <body>
@@ -1112,7 +1136,20 @@ function update(){
 // ═════════════════════════════════════════════════════════════════
 const canvas=document.getElementById('gameCanvas');
 const ctx=canvas.getContext('2d');
-canvas.width=CW; canvas.height=CH;
+// Render at the device pixel ratio for crispness, then CSS-scale the element to
+// fill the viewport (laptop = large, phone = fit, both orientations).
+let RS=Math.min(window.devicePixelRatio||1, 2);
+function fitCanvas(){
+  RS=Math.min(window.devicePixelRatio||1, 2);
+  canvas.width=Math.round(CW*RS); canvas.height=Math.round(CH*RS);
+  const vw=window.innerWidth, vh=window.innerHeight;
+  const scale=Math.min(vw/CW, vh/CH);          // largest aspect-preserving fit
+  canvas.style.width=Math.round(CW*scale)+'px';
+  canvas.style.height=Math.round(CH*scale)+'px';
+}
+fitCanvas();
+window.addEventListener('resize', fitCanvas);
+window.addEventListener('orientationchange', ()=>setTimeout(fitCanvas,150));
 
 // Palette arc: bright Americana → desaturated gray → vibrant rebuilt
 const PALETTES={
@@ -1781,6 +1818,7 @@ function drawPlayfield(){
   ctx.restore();
 }
 function render(){
+  ctx.setTransform(RS,0,0,RS,0,0);   // map logical CW×CH space onto the HiDPI backing store
   ctx.clearRect(0,0,CW,CH);
   if(gameState==='ATTRACT'){ drawAttract(); return; }
   if(gameState==='CARD'){ drawCard(); return; }
@@ -1985,6 +2023,35 @@ document.addEventListener('keydown',e=>{
     if(d){ pac.pvx=d[0]; pac.pvy=d[1]; }
   }
 });
+
+// ── Touch controls (phones/tablets): swipe to steer, tap to start/advance ──
+function steer(dx,dy){
+  if(gameState==='PLAYING'&&!paused&&pac&&!pac.dead){
+    if(Math.abs(dx)>Math.abs(dy)){ pac.pvx=dx>0?1:-1; pac.pvy=0; }
+    else { pac.pvx=0; pac.pvy=dy>0?1:-1; }
+  }
+}
+function tapAdvance(){
+  if(gameState==='ATTRACT'){ resetGame(); startLevel(1); return; }
+  if(gameState==='CARD'){ if(cardDone||cardTimer>30){ gameState='PLAYING'; readyTimer=80; startLevelMusic(); } return; }
+  if(gameState==='FINALCARD'){ if(finalCardT>300) showLanding(); return; }
+  if(gameState==='GAMEOVER'){ if(gameoverTimer>90) showLanding(); return; }
+}
+let tStartX=0, tStartY=0;
+canvas.addEventListener('touchstart',e=>{
+  initAudio();
+  if(landingVisible()) return;        // the coin-machine DOM handles its own taps
+  const t=e.changedTouches[0]; tStartX=t.clientX; tStartY=t.clientY;
+  e.preventDefault();
+},{passive:false});
+canvas.addEventListener('touchmove',e=>{ if(!landingVisible()) e.preventDefault(); },{passive:false});
+canvas.addEventListener('touchend',e=>{
+  if(landingVisible()) return;
+  const t=e.changedTouches[0], dx=t.clientX-tStartX, dy=t.clientY-tStartY;
+  e.preventDefault();
+  if(gameState!=='PLAYING'){ tapAdvance(); }       // a touch anywhere starts/advances
+  else if(Math.hypot(dx,dy)>=24){ steer(dx,dy); }  // a real swipe steers
+},{passive:false});
 function resetGame(){
   hiScore=Math.max(hiScore,score);
   score=0; lives=CONFIG.lives; totalDeports=0; levelDeports=0;
