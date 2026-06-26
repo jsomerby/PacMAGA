@@ -523,7 +523,7 @@ let level=1, score=0, hiScore=0, lives=CONFIG.lives, tick=0, levelTimer=0;
 let paused=false, muted=false;
 let totalDeports=0, levelDeports=0;
 let btcCount=0, btcPrice=0, btcFlash=0;
-let btcCandles=[], btcCandleClock=0, btcCandleOpen=null;   // running OHLC tape
+let btcCandles=[], btcForming=null, btcCandleClock=0, btcLast=null;  // realistic OHLC tape
 let burgerPrice=0;
 let cardTimer=0, cardAlpha=0, cardDone=false;
 let shake=0;                 // screen shake frames
@@ -1058,20 +1058,38 @@ function levelProgress(){
   if(cfg.goal.type==='deports') return levelDeports/cfg.goal.n;
   return Math.min(1,levelTimer/3600);
 }
-function pushBtcCandle(price){
-  const open = btcCandleOpen==null ? price : btcCandleOpen;
-  const close = price;
-  const vol = Math.max(price*0.05, 1);
-  const hi = Math.max(open,close) + Math.random()*vol;
-  const lo = Math.max(0, Math.min(open,close) - Math.random()*vol);
-  btcCandles.push({o:open,h:hi,l:lo,c:close});
-  if(btcCandles.length>18) btcCandles.shift();
-  btcCandleOpen = close;   // next candle opens where this one closed
+const BTC_MAX=20, BTC_COMMIT=16;   // candles shown / frames per candle
+// One market tick: the rightmost ("forming") candle updates live each frame and
+// commits every BTC_COMMIT frames. Price random-walks around the scripted fair
+// value with clustered volatility, varied body sizes, wicks and the odd doji —
+// the texture of a real 15-minute BTC chart rather than a smooth synthetic line.
+function btcTick(target){
+  if(!(target>0)) target=0.5;
+  if(btcLast==null) btcLast=target;
+  if(!btcForming){ btcForming={o:btcLast,h:btcLast,l:btcLast,c:btcLast,v:0.55+Math.random()*1.2}; btcCandleClock=0; }
+  const f=btcForming;
+  const unit=Math.max(target*0.011,0.4)*f.v;     // this candle's volatility (clustered)
+  const drift=(target-f.c)*0.05;                 // gentle mean-reversion to fair value
+  f.c += drift + (Math.random()-0.5)*2*unit;
+  if(f.c<0.4) f.c=0.4;
+  if(f.c>f.h) f.h=f.c;
+  if(f.c<f.l) f.l=f.c;
+  if(Math.random()<0.12){                        // occasional wick rejection
+    const sp=unit*(1.2+Math.random()*3);
+    if(Math.random()<0.5) f.h+=sp; else f.l=Math.max(0.3,f.l-sp);
+  }
+  if(++btcCandleClock>=BTC_COMMIT){
+    btcLast=f.c; btcCandles.push(f);
+    if(btcCandles.length>BTC_MAX) btcCandles.shift();
+    btcForming=null;
+  }
 }
 function seedBtcCandles(){
-  btcCandles=[]; btcCandleOpen=null; btcCandleClock=0;
-  let p=620;
-  for(let i=0;i<14;i++){ p*=1.035+Math.random()*0.03; pushBtcCandle(p); } // a green run-up to start
+  btcCandles=[]; btcForming=null; btcCandleClock=0; btcLast=null;
+  let p=560;
+  for(let i=0;i<BTC_MAX;i++){ p*=1.02+Math.random()*0.045;        // noisy green-ish run-up
+    for(let k=0;k<BTC_COMMIT;k++) btcTick(p);
+  }
 }
 function updateEconomyTickers(){
   const cfg=L(), t=levelProgress();
@@ -1085,8 +1103,8 @@ function updateEconomyTickers(){
     btcPrice=lerp(cfg.btc[0],cfg.btc[1],t);
   }
   if(cfg.burger) burgerPrice=lerp(cfg.burger[0],cfg.burger[1],t);
-  // feed the running candlestick tape (levels 1–7, before it flatlines)
-  if(level<=7 && ++btcCandleClock>=18){ btcCandleClock=0; pushBtcCandle(btcPrice); }
+  // feed the live candlestick tape (levels 1–7, before it flatlines)
+  if(level<=7) btcTick(btcPrice);
   // language takeover ramps live within L8–10 so flips happen during play
   if(isEndgame()){
     const from = level===8?0 : CONFIG.levels[level-1].spanishRatio;
@@ -1646,23 +1664,29 @@ function drawHUD(){
   ctx.fillStyle=crashed?'#FF3333':'#44DD44';
   const shown= level===7&&famineFlags.crashed ? 6 : stackVal;
   ctx.fillText(btcCount>0?fmtUSD(shown):fmtUSD(btcPrice),CW-8,38);
-  // running candlestick chart of the BTC tape (levels 1–7)
-  if(level<=7 && btcCandles.length){
-    const sx=CW-104, sy=42, sw=98, sh=14;
-    // frame
-    ctx.fillStyle='rgba(255,255,255,0.04)'; ctx.fillRect(sx,sy,sw,sh);
+  // live candlestick chart of the BTC tape (levels 1–7) — TradingView 15m style
+  if(level<=7 && (btcCandles.length||btcForming)){
+    const sx=CW-120, sy=40, sw=114, sh=16;
+    ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.fillRect(sx,sy,sw,sh);
+    ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.lineWidth=1; ctx.strokeRect(sx+0.5,sy+0.5,sw-1,sh-1);
+    const list = btcForming ? btcCandles.concat([btcForming]) : btcCandles;
     let mn=Infinity,mx=-Infinity;
-    for(const k of btcCandles){ if(k.l<mn)mn=k.l; if(k.h>mx)mx=k.h; }
-    if(mx-mn<1) mx=mn+1;
-    const Y=v=>sy+sh-((v-mn)/(mx-mn))*(sh-1)-0.5;
-    const n=btcCandles.length, cw=sw/n;
+    for(const k of list){ if(k.l<mn)mn=k.l; if(k.h>mx)mx=k.h; }
+    if(mx-mn<0.01) mx=mn+0.01;
+    const pad=(mx-mn)*0.08; mn-=pad; mx+=pad;          // headroom so wicks don't clip
+    const Y=v=>sy+sh-((v-mn)/(mx-mn))*(sh-2)-1;
+    const n=list.length, cw=sw/n, UP='#26A69A', DN='#EF5350';
+    // dashed "current price" line, like a live chart
+    const cur=list[list.length-1].c;
+    ctx.setLineDash([2,2]); ctx.strokeStyle='rgba(255,235,140,0.45)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(sx,Math.round(Y(cur))+0.5); ctx.lineTo(sx+sw,Math.round(Y(cur))+0.5); ctx.stroke();
+    ctx.setLineDash([]);
     for(let i=0;i<n;i++){
-      const k=btcCandles[i], cx=sx+i*cw+cw/2, up=k.c>=k.o;
-      ctx.strokeStyle=ctx.fillStyle=up?'#2ED760':'#FF4444';
-      ctx.lineWidth=1;                                   // wick
-      ctx.beginPath(); ctx.moveTo(cx,Y(k.h)); ctx.lineTo(cx,Y(k.l)); ctx.stroke();
-      const bw=Math.max(2,cw*0.6), yo=Y(k.o), yc=Y(k.c); // body
-      ctx.fillRect(cx-bw/2, Math.min(yo,yc), bw, Math.max(1,Math.abs(yc-yo)));
+      const k=list[i], cx=Math.round(sx+i*cw+cw/2)+0.5, up=k.c>=k.o, col=up?UP:DN;
+      ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(cx,Y(k.h)); ctx.lineTo(cx,Y(k.l)); ctx.stroke();   // wick
+      const bw=Math.max(2,Math.floor(cw*0.66)), yo=Y(k.o), yc=Y(k.c);                 // body
+      ctx.fillRect(Math.round(cx-bw/2), Math.min(yo,yc), bw, Math.max(1,Math.abs(yc-yo)));
     }
   }
   // ── left sidebar: vertical protein meter ──
