@@ -99,6 +99,26 @@ html, body {
   z-index:200;display:flex;align-items:center;justify-content:center;
   font-family:'Press Start 2P','Courier New',monospace;font-size:22px;color:#FFD700;letter-spacing:4px;}
 #landing .go-overlay.active{opacity:1;pointer-events:all;}
+/* ── On-screen joystick (touch only) ── */
+#dpad{
+  position:fixed; left:50%; transform:translateX(-50%); bottom:calc(14px + env(safe-area-inset-bottom));
+  z-index:45; display:none;
+  grid-template-columns:repeat(3,58px); grid-template-rows:repeat(3,58px); gap:6px;
+  touch-action:none; user-select:none;
+}
+#dpad.show{ display:grid; }
+#dpad .dbtn{
+  -webkit-appearance:none; appearance:none; font-family:inherit;
+  background:rgba(20,20,30,0.5); border:2px solid rgba(255,215,0,0.55);
+  color:#FFD700; border-radius:12px; font-size:24px; line-height:1;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; touch-action:none; -webkit-tap-highlight-color:transparent;
+  box-shadow:0 2px 8px rgba(0,0,0,0.5);
+}
+#dpad .dbtn.active{ background:rgba(255,215,0,0.35); transform:scale(0.94); }
+#dpad .up{grid-column:2;grid-row:1;} #dpad .left{grid-column:1;grid-row:2;}
+#dpad .mid{grid-column:2;grid-row:2;background:rgba(20,20,30,0.28);border-color:rgba(255,215,0,0.2);border-radius:50%;pointer-events:none;}
+#dpad .right{grid-column:3;grid-row:2;} #dpad .down{grid-column:2;grid-row:3;}
 /* allow the coin screen to scroll if it ever overflows a small screen */
 #landing{ overflow:auto; padding:16px 0; -webkit-overflow-scrolling:touch; }
 #landing .container{ width:100%; }
@@ -238,6 +258,15 @@ html, body {
   <div class="go-overlay" id="goOverlay">LOADING...</div>
 </div>
 
+<!-- On-screen joystick for touch devices (shown only while playing) -->
+<div id="dpad" aria-hidden="true">
+  <button class="dbtn up"    data-dir="up">▲</button>
+  <button class="dbtn left"  data-dir="left">◀</button>
+  <button class="dbtn mid"   tabindex="-1"></button>
+  <button class="dbtn right" data-dir="right">▶</button>
+  <button class="dbtn down"  data-dir="down">▼</button>
+</div>
+
 <script>
 'use strict';
 // ═════════════════════════════════════════════════════════════════
@@ -302,7 +331,7 @@ const CONFIG = {
   { // L3 — BUILD THE WALL, BUILD THE BODY
     shopsOpen:['A','D','E','F'], shopsDark:['B','C'],
     ghosts:12, ghostSpeed:0.78, spawnRate:0.75, pellets:4,
-    goal:{type:'deports', n:9}, drain:0.026, pCap:68,
+    goal:{type:'deports', n:9}, drain:0.026, pCap:76,
     btc:[6000,18000], burger:null, spanishRatio:0, palette:'bright', music:'theme',
   },
   { // L4 — WINNING SO MUCH
@@ -379,7 +408,7 @@ const STR = {
   INSERTCOIN:   ['INSERT COIN','INSERTE MONEDA'],
   BURGER:       ['BURGER','HAMBURGUESA'],
   SURVIVE:      ['SURVIVE','SOBREVIVE'],
-  PRESSKEY:     ['PRESS ANY KEY','PULSA CUALQUIER TECLA'],
+  PRESSKEY:     ['PRESS KEY OR TAP','PULSA TECLA O TOCA'],
   DEPORTED:     ['DEPORTED','DEPORTADOS'],
   MUTE:         ['M:MUTE  P:PAUSE','M:SILENCIO  P:PAUSA'],
 };
@@ -530,8 +559,9 @@ function proteinState(){
 }
 function stateSpeed(st){ return CONFIG.states[st].speed; }
 // visual scale per state
-const STATE_SCALE={SKINNY:0.72, BUFF:0.95, SWOLE:1.18, FAT:1.30, RENAL:1.34, WITHERED:0.62};
-const STATE_COLOR={SKINNY:'#FFEE88', BUFF:'#FFD700', SWOLE:'#FFC400', FAT:'#FFA800', RENAL:'#D8C87E', WITHERED:'#B8B27A'};
+// WITHERED keeps him bloated (not gaunt) — he never slims back down, just sickens
+const STATE_SCALE={SKINNY:0.72, BUFF:0.95, SWOLE:1.18, FAT:1.30, RENAL:1.34, WITHERED:1.26};
+const STATE_COLOR={SKINNY:'#FFEE88', BUFF:'#FFD700', SWOLE:'#FFC400', FAT:'#FFA800', RENAL:'#C8C076', WITHERED:'#A6B86A'};
 
 function makePac(){
   return {
@@ -542,7 +572,15 @@ function makePac(){
     boostLeft:0,                 // taco boost frames
     invinc:0, dead:false, deadAnim:0,
     turnDelay:0,
+    everFat:false, everRenal:false, // body never fully recovers once it bloats
   };
+}
+// Once he's been heavy, weight is sticky and there's a floor he can't drop below —
+// he can't get lean/fast again, which is the whole trap.
+function proteinFloor(){
+  if(pac.everRenal) return 72;   // renal → stays mostly fat/bloated
+  if(pac.everFat)   return 56;   // fat → can never get back to lean, fast BUFF
+  return 0;
 }
 function pacSpeed(){
   const st=proteinState();
@@ -585,10 +623,16 @@ function updatePac(){
   // Mouth chomp
   const moving=pac.vx!==0||pac.vy!==0;
   if(moving){ pac.mouth+=pac.mouthDir*0.10; if(pac.mouth>0.34)pac.mouthDir=-1; if(pac.mouth<0.04)pac.mouthDir=1; }
+  // remember the worst he's reached — bloat is permanent
+  if(st==='FAT'||st==='RENAL') pac.everFat=true;
+  if(st==='RENAL') pac.everRenal=true;
   // Meter drain — eating is his only verb
   if(!pac.withered){
-    pac.protein=Math.max(0,pac.protein-L().drain);
-    if(level===7 && pac.protein<=0 && levelTimer>200) pac.withered=true; // famine bottoms out
+    let drain=L().drain;
+    // once fat, the weight clings: losing it is slow and grinding
+    if(pac.everFat && pac.protein>proteinFloor()+4) drain*=0.4;
+    pac.protein=Math.max(proteinFloor(), pac.protein-drain);
+    // famine never fully wastes him now — he stays mainly bloated, just greener (see drawPac)
   }
   // Eat foods
   const eatR=pac.r*STATE_SCALE[st]*0.8+8;
@@ -1110,7 +1154,7 @@ function update(){
     cardTimer++;
     cardAlpha=Math.min(1,cardAlpha+0.06);
     if(cardTimer>240) cardDone=true;
-    if(cardTimer>460){ gameState='PLAYING'; readyTimer=80; startLevelMusic(); } // auto-advance
+    // no auto-advance — the card stays up until the player clicks/taps/keys through
     return;
   }
   if(gameState==='KILLSCREEN'){ killScreenT++; if(killScreenT>480){ gameState='FINALCARD'; finalCardT=0; } return; }
@@ -1455,7 +1499,16 @@ function drawPacSprite(x,y,st,facing,mouth,deadAnim){
     ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,r,m,Math.PI*2-m); ctx.closePath(); ctx.fill();
     ctx.globalAlpha=1;
   }
-  if(st==='WITHERED'&&Math.floor(tick/8)%4===0){ ctx.globalAlpha=0.5; } // flicker
+  // sickness green: ramps through the famine (L7) and stays on the terminal bloated body
+  let green=0;
+  if(st==='WITHERED') green=0.55;
+  else if(level===7) green=Math.min(0.55, levelTimer/(18*60));
+  if(green>0){
+    ctx.globalAlpha=green; ctx.fillStyle='#5FA84B';
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,r,m,Math.PI*2-m); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+  if(st==='WITHERED'&&Math.floor(tick/8)%4===0){ ctx.globalAlpha=0.5; } // sickly flicker
   // BUFF: flex arms; SWOLE: veins + sunglasses; FAT: belly line
   if(st==='BUFF'||st==='SWOLE'){
     ctx.strokeStyle='rgba(0,0,0,0.25)'; ctx.lineWidth=2;
@@ -1471,7 +1524,7 @@ function drawPacSprite(x,y,st,facing,mouth,deadAnim){
   } else {
     ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(r*0.26,-r*0.36,Math.max(1.6,r*0.10),0,7); ctx.fill();
   }
-  if(st==='FAT'||st==='RENAL'){
+  if(st==='FAT'||st==='RENAL'||st==='WITHERED'){
     ctx.strokeStyle='rgba(0,0,0,0.2)'; ctx.lineWidth=1.5;
     ctx.beginPath(); ctx.arc(0,r*0.35,r*0.5,Math.PI*0.15,Math.PI*0.85); ctx.stroke();
   }
@@ -2052,6 +2105,29 @@ canvas.addEventListener('touchend',e=>{
   if(gameState!=='PLAYING'){ tapAdvance(); }       // a touch anywhere starts/advances
   else if(Math.hypot(dx,dy)>=24){ steer(dx,dy); }  // a real swipe steers
 },{passive:false});
+
+// ── On-screen joystick (touch devices) ──
+const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints>0) ||
+                (window.matchMedia && matchMedia('(pointer:coarse)').matches);
+const dpad=document.getElementById('dpad');
+const DPADMAP={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};
+dpad.querySelectorAll('.dbtn[data-dir]').forEach(b=>{
+  const d=DPADMAP[b.dataset.dir];
+  const press=ev=>{ ev.preventDefault(); initAudio();
+    if(gameState==='PLAYING'&&!paused&&pac&&!pac.dead){ pac.pvx=d[0]; pac.pvy=d[1]; }
+    b.classList.add('active'); };
+  const release=ev=>{ ev.preventDefault(); b.classList.remove('active'); };
+  b.addEventListener('touchstart',press,{passive:false});
+  b.addEventListener('touchend',release,{passive:false});
+  b.addEventListener('touchcancel',release,{passive:false});
+  b.addEventListener('mousedown',press);
+  b.addEventListener('mouseup',release);
+  b.addEventListener('mouseleave',release);
+});
+function updateDpad(){
+  if(!isTouch && !window.__forceDpad){ dpad.classList.remove('show'); return; }
+  dpad.classList.toggle('show', gameState==='PLAYING' && !landingVisible());
+}
 function resetGame(){
   hiScore=Math.max(hiScore,score);
   score=0; lives=CONFIG.lives; totalDeports=0; levelDeports=0;
@@ -2126,7 +2202,7 @@ document.getElementById('btnDecline').addEventListener('click',()=>{
 
 // ── Boot ──
 buildMap();
-function loop(){ update(); render(); requestAnimationFrame(loop); }
+function loop(){ update(); render(); updateDpad(); requestAnimationFrame(loop); }
 loop();
 
 </script>
