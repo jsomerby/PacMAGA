@@ -358,7 +358,7 @@ const CONFIG = {
     goal:{type:'survive', sec:50}, drain:0.040,
     btc:[61000,0], btcStackEnd:6, burger:[400,400], spanishRatio:0, palette:'dead', music:'famine',
   },
-  { // L8 — THEY'RE BACK
+  { // L8 — REPLACEMENT (the maze flips fully to Spanish here)
     taquerias:true, shopsOpen:[], shopsDark:['A','B','C','D','E','F','G','H'],
     ghosts:5, ghostSpeed:0.80, spawnRate:0, tacoRate:0.8, ghostJoinSec:10,
     goal:{type:'survive', sec:45}, drain:0,
@@ -383,13 +383,13 @@ const CONFIG = {
 // ═════════════════════════════════════════════════════════════════
 const CARDS = [ null,
  { t:'DAY ONE OF THE GRINDSET', q:`"America's been stolen from guys like me. But I'm done complaining. Time to eat big, lift big, and take my country back. One burger at a time."` },
- { t:'THE PUMP IS REAL', q:`"Twenty ghosts gone and I already feel it. More burgers for real Americans. They said deporting them would hurt the economy. Looks pretty good from where I'm chomping."` },
+ { t:'THE PUMP IS REAL', q:`"The deportations are already working and I can feel it. Things are starting to feel great again. More burgers for real Americans. They said deporting them would hurt the economy. Looks pretty good from where I'm chomping."` },
  { t:'BUILD THE WALL, BUILD THE BODY', q:`"Swole is a mindset. Every ghost over that wall is a job coming back. Any day now. The factories are basically already reopening."` },
  { t:'WINNING SO MUCH', q:`"Kinda weird that the burger joints keep closing when we're winning this hard. Probably the deep state. Anyway — bulk season never ends."` },
  { t:"IT'S CALLED BULKING", q:`"The scale doesn't measure freedom. I'm not fat, I'm a patriot in the offseason. Bitcoin's mooning, baby — burger's twelve bucks but I'm rich in freedom money."` },
  { t:'MINOR SETBACK', q:`"Doctor says my kidneys are quitting on me. Typical — even my organs are woke. Can't stop now. Three ghosts left in the whole map. Finish the job."` },
  { t:'MISSION ACCOMPLISHED', q:`"Did it. Every ghost gone. 100% American maze. Burgers are $400 now but I'm loaded — wait. Bitcoin crashed?? My whole stack's worth six bucks. SIX. Who do I even... there's no one left to sell it to."` },
- { t:"THEY'RE BACK", q:`"The wall broke. They're pouring in and they brought... tacos? The signs all say ABIERTO. They don't even look scared of me. Why aren't they scared of me."` },
+ { t:'REPLACEMENT', q:`"The wall broke. They're pouring in and they brought... tacos? The signs all say ABIERTO. They don't even look scared of me. Why aren't they scared of me."` },
  { t:'RUN', t_es:'CORRE', q:`"Everything's in Spanish. The music's wrong. The flags are wrong. I eat their tacos and run but there's always more of them. This was supposed to be MY maze."` },
  { t:'FIN DEL JUEGO, AMIGO', q:`...` },
 ];
@@ -562,6 +562,8 @@ function stateSpeed(st){ return CONFIG.states[st].speed; }
 // WITHERED keeps him bloated (not gaunt) — he never slims back down, just sickens
 const STATE_SCALE={SKINNY:0.72, BUFF:0.95, SWOLE:1.18, FAT:1.30, RENAL:1.34, WITHERED:1.26};
 const STATE_COLOR={SKINNY:'#FFEE88', BUFF:'#FFD700', SWOLE:'#FFC400', FAT:'#FFA800', RENAL:'#C8C076', WITHERED:'#A6B86A'};
+// Spanish protein-state labels — shown once the language takeover flips (L8+)
+const STATE_ES={SKINNY:'FLACO', BUFF:'FORTACHÓN', SWOLE:'MUSCULOSO', FAT:'GORDO', RENAL:'RENAL', WITHERED:'MARCHITO'};
 
 function makePac(){
   return {
@@ -1045,7 +1047,8 @@ function startLevel(n){
     }
   }
   if(cfg.goal.type==='survive') surviveLeft=cfg.goal.sec;
-  spanishRatio = n>=9 ? CONFIG.levels[n-1].spanishRatio : (n===8?0:cfg.spanishRatio);
+  // The Replacement: from L8 on, the maze is already fully in Spanish.
+  spanishRatio = n>=8 ? 1.0 : cfg.spanishRatio;
   burgerPrice = cfg.burger?cfg.burger[0]:0;
   btcPrice = cfg.btc[0];
   gameState='CARD'; cardTimer=0; cardAlpha=0; cardDone=false;
@@ -1105,18 +1108,8 @@ function updateEconomyTickers(){
   if(cfg.burger) burgerPrice=lerp(cfg.burger[0],cfg.burger[1],t);
   // feed the live candlestick tape (levels 1–7, before it flatlines)
   if(level<=7) btcTick(btcPrice);
-  // language takeover ramps live within L8–10 so flips happen during play
-  if(isEndgame()){
-    const from = level===8?0 : CONFIG.levels[level-1].spanishRatio;
-    const to = cfg.spanishRatio;
-    const prev=spanishRatio;
-    spanishRatio=lerp(from,to,levelTimer/(40*60));
-    // any key crossing its threshold right now → glitch flicker
-    for(const k in STR){
-      const h=strHash(k);
-      if(h>=prev&&h<spanishRatio) glitchFlips[k]=40;
-    }
-  }
+  // The Replacement: from L8 on, every word in the maze is already in Spanish.
+  if(isEndgame()) spanishRatio=1.0;
   for(const k in glitchFlips) if(--glitchFlips[k]<=0) delete glitchFlips[k];
 }
 function checkLevelEnd(){
@@ -1205,9 +1198,16 @@ function fitCanvas(){
   RS=Math.min(window.devicePixelRatio||1, 2);
   canvas.width=Math.round(CW*RS); canvas.height=Math.round(CH*RS);
   const vw=window.innerWidth, vh=window.innerHeight;
-  const scale=Math.min(vw/CW, vh/CH);          // largest aspect-preserving fit
+  // On touch phones in portrait, reserve room at the bottom for the on-screen
+  // joystick so the maze sits above it instead of being overlapped.
+  const touch=('ontouchstart' in window)||(navigator.maxTouchPoints>0)||
+              (window.matchMedia&&matchMedia('(pointer:coarse)').matches)||window.__forceDpad;
+  const reserve=(touch && vh>=vw) ? 240 : 0;
+  const vhEff=vh-reserve;
+  const scale=Math.min(vw/CW, vhEff/CH);        // largest aspect-preserving fit
   canvas.style.width=Math.round(CW*scale)+'px';
   canvas.style.height=Math.round(CH*scale)+'px';
+  document.body.style.paddingBottom = reserve ? reserve+'px' : '';
 }
 fitCanvas();
 window.addEventListener('resize', fitCanvas);
@@ -1711,9 +1711,9 @@ function drawHUD(){
   ctx.fillStyle='#8899AA'; ctx.font='bold 9px monospace'; ctx.textAlign='center';
   ctx.fillText(glitchText('PROTEIN',T('PROTEIN')),0,0);
   ctx.restore();
-  // state word
+  // state word (flips to Spanish with the rest of the HUD)
   ctx.fillStyle=meterCol; ctx.font='bold 8px monospace'; ctx.textAlign='center';
-  ctx.fillText(st,SIDE/2,my+mh+14);
+  ctx.fillText(spanishRatio>=0.35?STATE_ES[st]:st,SIDE/2,my+mh+14);
   // lives — Confederate flags, bottom-left
   ctx.fillStyle='#8899AA'; ctx.font='8px monospace';
   ctx.fillText(glitchText('LIVES',T('LIVES')),SIDE/2,my+mh+30);
