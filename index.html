@@ -316,13 +316,13 @@ const CONFIG = {
   },
   // Per-level tuning. shopIds: A..H positions defined in the map.
   levels: [ null,
-  { // L1 — DAY ONE OF THE GRINDSET
+  { // L1 — DAY ONE OF THE GRINDSET (deport all 20 — the full honeymoon grind)
     shopsOpen:['A','B','C','D','E','F'], shopsDark:[],
-    ghosts:8, ghostSpeed:0.55, spawnRate:1.0, pellets:4,
-    goal:{type:'deports', n:6}, drain:0.018, pCap:35,
+    ghosts:20, ghostSpeed:0.55, spawnRate:1.0, pellets:4,
+    goal:{type:'deports', n:20}, drain:0.018, pCap:35,
     btc:[1000,1400], burger:null, spanishRatio:0, palette:'bright', music:'theme',
   },
-  { // L2 — THE PUMP IS REAL (L1's 6 + L2's 14 = the 20th deport mints the first BTC here)
+  { // L2 — THE PUMP IS REAL ("twenty ghosts gone" — he's just cleared all 20 in L1)
     shopsOpen:['A','C','D','E','F'], shopsDark:['B'],
     ghosts:14, ghostSpeed:0.66, spawnRate:0.9, pellets:4,
     goal:{type:'deports', n:14}, drain:0.022, pCap:44,
