@@ -119,6 +119,90 @@ html, body {
 #dpad .up{grid-column:2;grid-row:1;} #dpad .left{grid-column:1;grid-row:2;}
 #dpad .mid{grid-column:2;grid-row:2;background:rgba(20,20,30,0.28);border-color:rgba(255,215,0,0.2);border-radius:50%;pointer-events:none;}
 #dpad .right{grid-column:3;grid-row:2;} #dpad .down{grid-column:2;grid-row:3;}
+/* ── Portrait arcade-cabinet shell (touch phones, portrait only) ── */
+#cTop, #stick{ display:none; }
+body.console{
+  background:
+    radial-gradient(130% 70% at 50% 44%, #20222e 0%, #121219 58%, #08080c 100%);
+  padding-top:calc(80px + env(safe-area-inset-top));
+  padding-bottom:calc(244px + env(safe-area-inset-bottom));
+}
+/* the game "screen" — a CRT behind a black bezel with a gold inner trim */
+body.console #gameCanvas{
+  position:relative; border-radius:14px;
+  box-shadow:0 0 0 7px #07070b, 0 0 0 10px #2b2f3e, 0 0 0 12px rgba(255,215,0,0.45),
+             0 14px 32px rgba(0,0,0,0.75), inset 0 0 34px rgba(0,0,0,0.8);
+}
+body.shell #cTop{ display:flex; }
+body.shell #stick{ display:block; }
+/* ── Marquee (top of cabinet) ── */
+#cTop{
+  box-sizing:content-box; position:fixed; top:0; left:0; right:0; z-index:46;
+  height:80px; padding-top:env(safe-area-inset-top);
+  display:flex; align-items:center; justify-content:center; pointer-events:none;
+  background:linear-gradient(180deg,#0a0a0f,#15151d);
+  border-bottom:3px solid #000;
+  box-shadow:0 3px 0 #3a2614, 0 6px 12px rgba(0,0,0,0.6);   /* wood shelf line */
+}
+#cTop .marquee{
+  position:relative; height:62px; max-width:80%; padding:0 24px;
+  display:flex; align-items:center; justify-content:center; border-radius:7px;
+  background:linear-gradient(180deg,#fff7e0 0%,#f4e3b2 55%,#e8cf92 100%);
+  border:2px solid #1c150c;
+  box-shadow:0 0 28px rgba(255,224,140,0.5), inset 0 0 22px rgba(255,255,255,0.7),
+             inset 0 -6px 14px rgba(176,138,58,0.35), 0 0 0 4px #0a0a0f, 0 0 0 6px #5a3a1e;
+}
+#cTop .marquee svg{ height:46px; width:auto; display:block; filter:drop-shadow(0 1px 1px rgba(0,0,0,0.35)); }
+/* ── Control deck (bottom of cabinet) ── */
+#stick{
+  box-sizing:content-box; position:fixed; left:0; right:0; bottom:0; z-index:46;
+  height:244px; padding-bottom:env(safe-area-inset-bottom);
+  background:
+    radial-gradient(150% 90% at 50% 130%, #1b1d29 0%, #0b0b11 78%),
+    linear-gradient(180deg,#13141b,#0a0a10);
+  border-top:3px solid #000;
+  box-shadow:0 -3px 0 #3a2614, 0 -6px 12px rgba(0,0,0,0.5);  /* wood shelf line */
+  touch-action:none; user-select:none; -webkit-tap-highlight-color:transparent;
+}
+/* classic control-panel art: Pac-Man chasing the ghosts */
+#stick .decals{
+  position:absolute; top:15px; left:0; right:0;
+  display:flex; align-items:center; justify-content:center; gap:15px; pointer-events:none;
+}
+#stick .decals .pac{
+  width:20px; height:20px; border-radius:50%;
+  background:conic-gradient(from 33deg at 56% 50%, #FFD23F 0 296deg, transparent 296deg 360deg);
+  filter:drop-shadow(0 0 3px rgba(255,210,63,0.45));
+}
+#stick .decals .gh{ width:22px; height:22px; color:var(--c); filter:drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+#stick .decals .gh svg{ width:100%; height:100%; display:block; }
+/* ── Joystick: classic red ball on a dished metal base ── */
+#stick .base{
+  position:absolute; left:50%; top:calc(50% + 16px); width:164px; height:164px; margin:-82px 0 0 -82px;
+  border-radius:50%;
+  background:radial-gradient(circle at 50% 38%, #2e3142 0%, #15161f 58%, #2a2e3d 79%, #0a0b10 100%);
+  border:4px solid #05060a;
+  box-shadow:inset 0 9px 22px rgba(0,0,0,0.82), inset 0 -5px 12px rgba(255,255,255,0.05),
+             0 6px 15px rgba(0,0,0,0.6), 0 0 0 2px rgba(255,215,0,0.16);
+}
+#stick .base .nub{
+  position:absolute; left:50%; top:50%; width:78px; height:78px; margin:-39px 0 0 -39px;
+  border-radius:50%;
+  background:radial-gradient(circle at 38% 30%, #ff9486 0%, #ef3b2f 40%, #b81810 78%, #7c0d08 100%);
+  border:2px solid #5e0a06;
+  box-shadow:0 7px 15px rgba(0,0,0,0.55), inset 0 -6px 10px rgba(0,0,0,0.35), inset 0 5px 10px rgba(255,255,255,0.4);
+  will-change:transform;
+}
+#stick .base .nub::after{
+  content:''; position:absolute; left:20%; top:13%; width:34%; height:26%; border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,0.85),transparent 70%);
+}
+#stick .base .nub.grab{ box-shadow:0 9px 19px rgba(0,0,0,0.6), inset 0 -6px 10px rgba(0,0,0,0.35), inset 0 5px 10px rgba(255,255,255,0.5), 0 0 17px rgba(239,59,47,0.6); }
+#stick .base .chev{ position:absolute; left:50%; top:50%; color:rgba(255,215,0,0.5); font-size:14px; line-height:1; pointer-events:none; }
+#stick .base .chev.u{ transform:translate(-50%,-60px); }
+#stick .base .chev.d{ transform:translate(-50%,46px); }
+#stick .base .chev.l{ transform:translate(-62px,-8px); }
+#stick .base .chev.r{ transform:translate(48px,-8px); }
 /* allow the coin screen to scroll if it ever overflows a small screen */
 #landing{ overflow:auto; padding:16px 0; -webkit-overflow-scrolling:touch; }
 #landing .container{ width:100%; }
@@ -143,6 +227,23 @@ html, body {
 </head>
 <body>
 <canvas id="gameCanvas"></canvas>
+
+<!-- Portrait arcade-cabinet shell (touch + portrait): marquee + control deck -->
+<div id="cTop" aria-hidden="true"><div class="marquee" id="marquee"></div></div>
+<div id="stick" aria-hidden="true">
+  <div class="decals">
+    <span class="pac"></span>
+    <span class="gh" style="--c:#E32127"><svg viewBox="0 0 28 26"><path d="M3 13a11 11 0 0 1 22 0v11l-3.7-2.6L17.6 24 14 21.4 10.4 24 6.7 21.4 3 24z" fill="currentColor"/><circle cx="10.5" cy="12" r="3" fill="#fff"/><circle cx="17.5" cy="12" r="3" fill="#fff"/><circle cx="11.6" cy="12" r="1.5" fill="#16209c"/><circle cx="18.6" cy="12" r="1.5" fill="#16209c"/></svg></span>
+    <span class="gh" style="--c:#F25CA2"><svg viewBox="0 0 28 26"><path d="M3 13a11 11 0 0 1 22 0v11l-3.7-2.6L17.6 24 14 21.4 10.4 24 6.7 21.4 3 24z" fill="currentColor"/><circle cx="10.5" cy="12" r="3" fill="#fff"/><circle cx="17.5" cy="12" r="3" fill="#fff"/><circle cx="11.6" cy="12" r="1.5" fill="#16209c"/><circle cx="18.6" cy="12" r="1.5" fill="#16209c"/></svg></span>
+    <span class="gh" style="--c:#3FE0E0"><svg viewBox="0 0 28 26"><path d="M3 13a11 11 0 0 1 22 0v11l-3.7-2.6L17.6 24 14 21.4 10.4 24 6.7 21.4 3 24z" fill="currentColor"/><circle cx="10.5" cy="12" r="3" fill="#fff"/><circle cx="17.5" cy="12" r="3" fill="#fff"/><circle cx="11.6" cy="12" r="1.5" fill="#16209c"/><circle cx="18.6" cy="12" r="1.5" fill="#16209c"/></svg></span>
+    <span class="gh" style="--c:#FFA64D"><svg viewBox="0 0 28 26"><path d="M3 13a11 11 0 0 1 22 0v11l-3.7-2.6L17.6 24 14 21.4 10.4 24 6.7 21.4 3 24z" fill="currentColor"/><circle cx="10.5" cy="12" r="3" fill="#fff"/><circle cx="17.5" cy="12" r="3" fill="#fff"/><circle cx="11.6" cy="12" r="1.5" fill="#16209c"/><circle cx="18.6" cy="12" r="1.5" fill="#16209c"/></svg></span>
+  </div>
+  <div class="base">
+    <span class="chev u">▲</span><span class="chev d">▼</span>
+    <span class="chev l">◀</span><span class="chev r">▶</span>
+    <div class="nub"></div>
+  </div>
+</div>
 
 <!-- ════ Landing / "Insert Coin" screen ════ -->
 <div id="landing">
@@ -649,7 +750,7 @@ function updatePac(){
         // BUFF in the early levels, SWOLE by L3, FAT/RENAL only later
         const cap=L().pCap!==undefined?L().pCap:100;
         if(!pac.withered) pac.protein=Math.min(Math.max(cap,pac.protein),pac.protein+CONFIG.burgerProtein);
-        sfxWaka();
+        sfxBurger();
       } else { // taco — buys seconds, never survival
         score+=CONFIG.tacoPoints;
         pac.boostLeft=CONFIG.tacoBoostSec*60;
@@ -1194,20 +1295,27 @@ const ctx=canvas.getContext('2d');
 // Render at the device pixel ratio for crispness, then CSS-scale the element to
 // fill the viewport (laptop = large, phone = fit, both orientations).
 let RS=Math.min(window.devicePixelRatio||1, 2);
+let consoleMode=false;   // portrait phone → handheld-console shell (logo + joystick)
 function fitCanvas(){
   RS=Math.min(window.devicePixelRatio||1, 2);
   canvas.width=Math.round(CW*RS); canvas.height=Math.round(CH*RS);
   const vw=window.innerWidth, vh=window.innerHeight;
-  // On touch phones in portrait, reserve room at the bottom for the on-screen
-  // joystick so the maze sits above it instead of being overlapped.
   const touch=('ontouchstart' in window)||(navigator.maxTouchPoints>0)||
               (window.matchMedia&&matchMedia('(pointer:coarse)').matches)||window.__forceDpad;
-  const reserve=(touch && vh>=vw) ? 240 : 0;
-  const vhEff=vh-reserve;
-  const scale=Math.min(vw/CW, vhEff/CH);        // largest aspect-preserving fit
+  consoleMode = touch && vh>=vw;                 // portrait phone gets the console shell
+  document.body.classList.toggle('console', consoleMode);
+  document.body.style.paddingTop=''; document.body.style.paddingBottom='';
+  let availW=vw, availH=vh;
+  if(consoleMode){
+    // CSS (body.console) reserves the logo bar + joystick band incl. safe-area
+    // insets — read the resolved padding so the "screen" fills the gap exactly.
+    const cs=getComputedStyle(document.body);
+    availH = vh - (parseFloat(cs.paddingTop)||0) - (parseFloat(cs.paddingBottom)||0);
+    availW = vw - 16;
+  }
+  const scale=Math.min(availW/CW, availH/CH);     // largest aspect-preserving fit
   canvas.style.width=Math.round(CW*scale)+'px';
   canvas.style.height=Math.round(CH*scale)+'px';
-  document.body.style.paddingBottom = reserve ? reserve+'px' : '';
 }
 fitCanvas();
 window.addEventListener('resize', fitCanvas);
@@ -1746,29 +1854,36 @@ function drawCard(){
   ctx.strokeStyle= isEndgame()?'#D4549E':'#CC0000'; ctx.lineWidth=3;
   ctx.strokeRect(24,24,CW-48,CH-48);
   ctx.strokeStyle='#FFD700'; ctx.lineWidth=1; ctx.strokeRect(30,30,CW-60,CH-60);
-  ctx.fillStyle='#FF4444'; ctx.font='bold 15px monospace'; ctx.textAlign='center';
+  // On phones (console shell) the canvas is small on screen, so scale the card
+  // type up for legibility.
+  const k = consoleMode ? 1.5 : 1;
+  ctx.fillStyle='#FF4444'; ctx.font='bold '+Math.round(15*k)+'px monospace'; ctx.textAlign='center';
   const lvlWord=T('LEVEL');
   ctx.fillText('— '+lvlWord+' '+level+' —',CW/2,CH*0.30);
-  ctx.fillStyle='#FFD700'; ctx.font='bold 21px monospace';
   let title=card.t;
   if(level===9) title= spanishRatio>0.5||CONFIG.levels[9].spanishRatio>=0.7 ? (Math.floor(tick/40)%2?card.t_es:card.t) : card.t;
   if(level===10) title=card.t;
+  ctx.fillStyle='#FFD700';
+  let tf=Math.round(21*k);                          // shrink long titles to fit width
+  ctx.font='bold '+tf+'px monospace';
+  while(tf>14 && ctx.measureText(title).width>CW-70){ tf-=1; ctx.font='bold '+tf+'px monospace'; }
   ctx.fillText(title,CW/2,CH*0.37);
   // quote — typewriter
   const q=card.q;
   const chars=Math.min(q.length,Math.floor(cardTimer*2.2));
-  const shown=q.substring(0,chars);
-  const lines=wrapText(q,CW-140,'13px monospace');
-  ctx.font='13px monospace'; ctx.fillStyle='#DDDDCC'; ctx.textAlign='center';
+  const qf=Math.round(13*k), lineH=Math.round(22*k);
+  const qFont=qf+'px monospace';
+  const lines=wrapText(q,CW-(consoleMode?80:140),qFont);
+  ctx.font=qFont; ctx.fillStyle='#DDDDCC'; ctx.textAlign='center';
   let y=CH*0.46, count=0;
   for(const ln of lines){
     if(count>=chars) break;
     const part=ln.substring(0,Math.max(0,chars-count));
     ctx.fillText(part,CW/2,y);
-    count+=ln.length+1; y+=22;
+    count+=ln.length+1; y+=lineH;
   }
   if((cardDone||chars>=q.length)&&Math.floor(tick/18)%2===0){
-    ctx.fillStyle='#FFD700'; ctx.font='bold 12px monospace';
+    ctx.fillStyle='#FFD700'; ctx.font='bold '+Math.round(12*k)+'px monospace';
     ctx.fillText('▶ '+T('PRESSKEY')+' ◀',CW/2,CH-70);
   }
   ctx.restore();
@@ -1832,32 +1947,58 @@ function drawKillScreen(){
     }
   }
 }
+// The surprise ending: a bilingual reveal that every 50¢ went to the NAACP,
+// with the running total. Reached after the L10 kill-screen OR a normal game over.
 function drawFinalCard(){
   ctx.fillStyle='#000'; ctx.fillRect(0,0,CW,CH);
+  const k = consoleMode ? 1.4 : 1;                 // larger type on phones
+  const F=(px,bold)=> (bold?'bold ':'')+Math.round(px*k)+'px monospace';
   const a=Math.min(1,finalCardT/90);
-  ctx.save(); ctx.globalAlpha=a;
-  ctx.fillStyle='#FFF'; ctx.textAlign='center';
-  ctx.font='bold 26px monospace';
-  ctx.fillText('FIN DEL JUEGO.',CW/2,CH*0.38);
+  ctx.save(); ctx.textAlign='center'; ctx.globalAlpha=a;
+
+  // 1) Game over — English over Spanish
+  ctx.fillStyle='#FFF'; ctx.font=F(26,true);
+  ctx.fillText('GAME OVER',CW/2,CH*0.16);
+  ctx.fillStyle='#C9C9C9'; ctx.font=F(15,true);
+  ctx.fillText('FIN DEL JUEGO',CW/2,CH*0.205);
+
+  // 2) the thesis
   if(finalCardT>140){
-    ctx.font='bold 15px monospace';
-    ctx.fillText('NUNCA HUBO UN NIVEL DONDE GANAS.',CW/2,CH*0.50);
+    ctx.fillStyle='#FFF'; ctx.font=F(13,false);
+    ctx.fillText('There was never a level where you win.',CW/2,CH*0.29);
+    ctx.fillStyle='#AEB4C0'; ctx.font=F(12,false);
+    ctx.fillText('Nunca hubo un nivel donde ganas.',CW/2,CH*0.33);
   }
-  if(finalCardT>240&&Math.floor(tick/24)%2===0){
-    ctx.font='bold 13px monospace'; ctx.fillStyle='#FFD700';
-    ctx.fillText('INSERTE MONEDA PARA CREERLO OTRA VEZ.',CW/2,CH*0.64);
+  // 3) the coin gag (blinking)
+  if(finalCardT>240 && Math.floor(tick/24)%2===0){
+    ctx.fillStyle='#FFD700'; ctx.font=F(11,true);
+    ctx.fillText('Insert coin to believe it again.',CW/2,CH*0.40);
+    ctx.fillText('Inserte moneda para creerlo otra vez.',CW/2,CH*0.435);
   }
-  // the surprise: where the quarters went
+  // 4) THE SURPRISE — where the money actually went
   if(finalCardT>380){
     const a2=Math.min(1,(finalCardT-380)/90);
-    ctx.globalAlpha=a2;
-    ctx.fillStyle='#888'; ctx.font='10px monospace';
-    ctx.fillText('— P.D. —',CW/2,CH*0.76);
-    ctx.fillStyle='#FFF'; ctx.font='bold 11px monospace';
-    ctx.fillText('CADA MONEDA DE 50¢ FUE DONADA A LA NAACP.',CW/2,CH*0.81);
-    ctx.fillStyle='#44DD44'; ctx.font='bold 15px monospace';
-    ctx.fillText('RECAUDADO HASTA AHORA: $'+(naacpRaised()/100).toFixed(2),CW/2,CH*0.87);
+    ctx.globalAlpha=a*a2;
+    ctx.strokeStyle='rgba(255,215,0,0.5)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(CW*0.27,CH*0.505); ctx.lineTo(CW*0.73,CH*0.505); ctx.stroke();
+    ctx.fillStyle='#FFD700'; ctx.font=F(11,true);
+    ctx.fillText('THE SURPRISE · LA SORPRESA',CW/2,CH*0.55);
+    ctx.fillStyle='#FFF'; ctx.font=F(12,false);
+    ctx.fillText('Every 50¢ you put in went to the NAACP.',CW/2,CH*0.615);
+    ctx.fillStyle='#AEB4C0'; ctx.font=F(11,false);
+    ctx.fillText('Cada 50¢ que pusiste fue donado a la NAACP.',CW/2,CH*0.655);
+    ctx.fillStyle='#8A93A3'; ctx.font=F(10,false);
+    ctx.fillText('RAISED SO FAR · RECAUDADO HASTA AHORA',CW/2,CH*0.73);
+    ctx.fillStyle='#44DD44'; ctx.font=F(30,true);
+    ctx.fillText('$'+(naacpRaised()/100).toFixed(2),CW/2,CH*0.795);
+    ctx.fillStyle='#8A93A3'; ctx.font=F(10,false);
+    ctx.fillText('Thank you for playing. · Gracias por jugar.',CW/2,CH*0.85);
     ctx.globalAlpha=a;
+  }
+  // 5) dismiss prompt — only once the dollar amount is fully revealed
+  if(finalCardT>520 && Math.floor(tick/22)%2===0){
+    ctx.globalAlpha=1; ctx.fillStyle='#FFF'; ctx.font=F(11,true);
+    ctx.fillText('▶ TAP / TOCA ◀',CW/2,CH*0.93);
   }
   ctx.restore();
 }
@@ -1948,17 +2089,19 @@ function ensureWaka(){
   wakaSample.volume=CONFIG.wakaVolume;
   return wakaSample;
 }
-// The sample is a continuous "waka-waka" loop, so play it WHILE he's eating and
-// pause when he stops — like the arcade. Each bite extends the eating window.
-let wakaUntil=0;
-function sfxWaka(){ wakaUntil=performance.now()+CONFIG.wakaTailMs; }
+// The sample is a continuous "waka-waka" loop. Like the arcade, it rolls
+// steadily WHENEVER he's moving and pauses the instant he stops — so it no
+// longer stutters between burger bites.
 function updateWaka(){
   const a=ensureWaka();
   a.loop=true; a.volume=CONFIG.wakaVolume;
-  const want = !muted && !paused && gameState==='PLAYING' && performance.now()<wakaUntil;
+  const moving = pac && !pac.dead && pac.stumbleLeft<=0 && (pac.vx!==0||pac.vy!==0);
+  const want = !muted && !paused && gameState==='PLAYING' && moving;
   if(want){ if(a.paused){ const p=a.play(); if(p&&p.catch) p.catch(()=>{}); } }
   else if(!a.paused){ a.pause(); }
 }
+// short, subtle chomp accent so each burger still registers under the waka
+function sfxBurger(){ tone(170,0.05,'square',0.09,0,90); tone(120,0.06,'square',0.07,0.04,70); }
 function sfxTaco(){ tone(300,0.06,'square',0.12,0,600); tone(600,0.08,'square',0.10,0.06,900); }
 function sfxPellet(){ for(let i=0;i<5;i++) tone(220+i*110,0.09,'square',0.10,i*0.05); }
 function sfxEagle(){ // eagle screech: high sawtooth dive with warble
@@ -2087,12 +2230,11 @@ document.addEventListener('keydown',e=>{
     return;
   }
   if(gameState==='FINALCARD'){
-    // INSERTE MONEDA PARA CREERLO OTRA VEZ — literally: back to the coin slot
-    if(finalCardT>300){ showLanding(); }
+    if(finalCardT>520){ showLanding(); }   // only after the surprise has shown
     return;
   }
   if(gameState==='GAMEOVER'){
-    if(gameoverTimer>90){ showLanding(); }
+    if(gameoverTimer>90){ gameState='FINALCARD'; finalCardT=0; }  // → the NAACP reveal
     return;
   }
   if(gameState==='PLAYING'&&!paused&&pac&&!pac.dead){
@@ -2111,8 +2253,8 @@ function steer(dx,dy){
 function tapAdvance(){
   if(gameState==='ATTRACT'){ resetGame(); startLevel(1); return; }
   if(gameState==='CARD'){ if(cardDone||cardTimer>30){ gameState='PLAYING'; readyTimer=80; startLevelMusic(); } return; }
-  if(gameState==='FINALCARD'){ if(finalCardT>300) showLanding(); return; }
-  if(gameState==='GAMEOVER'){ if(gameoverTimer>90) showLanding(); return; }
+  if(gameState==='FINALCARD'){ if(finalCardT>520) showLanding(); return; }
+  if(gameState==='GAMEOVER'){ if(gameoverTimer>90){ gameState='FINALCARD'; finalCardT=0; } return; }
 }
 let tStartX=0, tStartY=0;
 canvas.addEventListener('touchstart',e=>{
@@ -2148,9 +2290,48 @@ dpad.querySelectorAll('.dbtn[data-dir]').forEach(b=>{
   b.addEventListener('mouseup',release);
   b.addEventListener('mouseleave',release);
 });
+// ── Portrait-console analog joystick: drag the nub OR push a direction ──
+const stick=document.getElementById('stick');
+const stickBase=stick&&stick.querySelector('.base');
+const stickNub=stick&&stick.querySelector('.nub');
+let stickActive=false;
+function stickSet(clientX,clientY){
+  if(!stickBase||!stickNub) return;
+  const r=stickBase.getBoundingClientRect();
+  const cx=r.left+r.width/2, cy=r.top+r.height/2;
+  const dx=clientX-cx, dy=clientY-cy, mag=Math.hypot(dx,dy);
+  const maxR=r.width/2 - stickNub.offsetWidth/2;
+  const s=mag>maxR?maxR/mag:1;                       // clamp the nub inside the base
+  stickNub.style.transform='translate('+(dx*s).toFixed(1)+'px,'+(dy*s).toFixed(1)+'px)';
+  if(mag>14 && gameState==='PLAYING' && !paused && pac && !pac.dead){
+    if(Math.abs(dx)>Math.abs(dy)){ pac.pvx=dx>0?1:-1; pac.pvy=0; }   // snap to 4-way
+    else { pac.pvx=0; pac.pvy=dy>0?1:-1; }
+  }
+}
+function stickEnd(){ stickActive=false; if(stickNub){ stickNub.style.transform='translate(0,0)'; stickNub.classList.remove('grab'); } }
+if(stick){
+  const grab=(x,y)=>{ initAudio(); if(gameState!=='PLAYING'){ tapAdvance(); return; } stickActive=true; if(stickNub) stickNub.classList.add('grab'); stickSet(x,y); };
+  stick.addEventListener('touchstart',e=>{ e.preventDefault(); const t=e.changedTouches[0]; grab(t.clientX,t.clientY); },{passive:false});
+  stick.addEventListener('touchmove',e=>{ e.preventDefault(); if(!stickActive)return; const t=e.changedTouches[0]; stickSet(t.clientX,t.clientY); },{passive:false});
+  stick.addEventListener('touchend',e=>{ e.preventDefault(); stickEnd(); },{passive:false});
+  stick.addEventListener('touchcancel',e=>{ e.preventDefault(); stickEnd(); },{passive:false});
+  // mouse support so the shell can be exercised on desktop via __forceDpad
+  stick.addEventListener('mousedown',e=>{ e.preventDefault(); grab(e.clientX,e.clientY); });
+  window.addEventListener('mousemove',e=>{ if(stickActive) stickSet(e.clientX,e.clientY); });
+  window.addEventListener('mouseup',()=>{ if(stickActive) stickEnd(); });
+}
+// clone the landing wordmark into the cabinet marquee
+(function(){
+  const src=document.querySelector('#logoImg svg'), mq=document.getElementById('marquee');
+  if(src&&mq){ const c=src.cloneNode(true); c.removeAttribute('id'); mq.appendChild(c); }
+})();
 function updateDpad(){
-  if(!isTouch && !window.__forceDpad){ dpad.classList.remove('show'); return; }
-  dpad.classList.toggle('show', gameState==='PLAYING' && !landingVisible());
+  const touch = isTouch || window.__forceDpad;
+  const onLanding = landingVisible();
+  // Portrait phones get the full console shell (logo + analog stick) whenever
+  // we're off the coin screen; landscape touch keeps the simple d-pad.
+  document.body.classList.toggle('shell', touch && consoleMode && !onLanding);
+  dpad.classList.toggle('show', touch && !consoleMode && gameState==='PLAYING' && !onLanding);
 }
 function resetGame(){
   hiScore=Math.max(hiScore,score);
