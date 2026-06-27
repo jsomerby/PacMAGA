@@ -2080,24 +2080,35 @@ function tone(freq,dur,type,gain,when,bend){
 }
 // ── SFX ──
 // Real Pac-Man waka sample, embedded as a data URI; kept subtle under the synth SFX.
-let wakaSample=null, lastWaka=0;
+// The source clip is 6.66s but only sounds from ~0.2s to ~4.3s (the rest is
+// silence), so an HTMLAudio loop went quiet for ~2.4s each cycle. Instead we
+// decode it once into a WebAudio buffer and loop ONLY the continuous waka
+// region; a gain node fades it in/out with movement, so it's always present
+// while he's moving — no gaps, no clicks.
+let wakaBuf=null, wakaSrc=null, wakaGain=null, wakaLoading=false;
+const WAKA_LOOP_START=0.25, WAKA_LOOP_END=3.30;   // steady, continuous region (sec)
 function ensureWaka(){
-  if(wakaSample) return wakaSample;
-  wakaSample=new Audio(WAKA_DATA_URI);
-  wakaSample.preload='auto';
-  wakaSample.volume=CONFIG.wakaVolume;
-  return wakaSample;
+  if(!AC || wakaBuf || wakaLoading) return;
+  wakaLoading=true;
+  fetch(WAKA_DATA_URI).then(r=>r.arrayBuffer()).then(b=>AC.decodeAudioData(b))
+    .then(buf=>{ wakaBuf=buf; }).catch(()=>{ wakaLoading=false; });
 }
-// The sample is a continuous "waka-waka" loop. Like the arcade, it rolls
-// steadily WHENEVER he's moving and pauses the instant he stops — so it no
-// longer stutters between burger bites.
+function startWakaSource(){
+  if(!AC||!master||!wakaBuf||wakaSrc) return;
+  wakaGain=AC.createGain(); wakaGain.gain.value=0; wakaGain.connect(master);
+  wakaSrc=AC.createBufferSource(); wakaSrc.buffer=wakaBuf;
+  wakaSrc.loop=true; wakaSrc.loopStart=WAKA_LOOP_START; wakaSrc.loopEnd=WAKA_LOOP_END;
+  wakaSrc.connect(wakaGain);
+  try{ wakaSrc.start(0, WAKA_LOOP_START); }catch(e){ wakaSrc=null; }
+}
 function updateWaka(){
-  const a=ensureWaka();
-  a.loop=true; a.volume=CONFIG.wakaVolume;
+  if(!AC) return;
+  ensureWaka();
+  if(wakaBuf && !wakaSrc) startWakaSource();
+  if(!wakaGain) return;
   const moving = pac && !pac.dead && pac.stumbleLeft<=0 && (pac.vx!==0||pac.vy!==0);
   const want = !muted && !paused && gameState==='PLAYING' && moving;
-  if(want){ if(a.paused){ const p=a.play(); if(p&&p.catch) p.catch(()=>{}); } }
-  else if(!a.paused){ a.pause(); }
+  wakaGain.gain.setTargetAtTime(want?CONFIG.wakaVolume:0, AC.currentTime, 0.035);
 }
 // short, subtle chomp accent so each burger still registers under the waka
 function sfxBurger(){ tone(170,0.05,'square',0.09,0,90); tone(120,0.06,'square',0.07,0.04,70); }
