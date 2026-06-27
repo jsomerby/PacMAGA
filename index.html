@@ -122,8 +122,7 @@ html, body {
 /* ── Portrait arcade-cabinet shell (touch phones, portrait only) ── */
 #cTop, #stick{ display:none; }
 body.console{
-  background:
-    radial-gradient(130% 70% at 50% 44%, #20222e 0%, #121219 58%, #08080c 100%);
+  background:#000;                                    /* black cabinet, like the landing */
   padding-top:calc(30vw + env(safe-area-inset-top));  /* full-width marquee logo */
   padding-bottom:calc(244px + env(safe-area-inset-bottom));
 }
@@ -136,18 +135,19 @@ body.console #gameCanvas{
 body.shell #cTop{ display:flex; }
 body.shell #stick{ display:block; }
 /* ── Marquee (top of cabinet) ── */
-/* full-width lit marquee band; logo spans the phone width */
+/* full-width logo on black — glowing + throbbing exactly like the landing screen */
 #cTop{
   box-sizing:border-box; position:fixed; top:0; left:0; right:0; z-index:46;
   height:calc(30vw + env(safe-area-inset-top)); padding-top:env(safe-area-inset-top);
   align-items:center; justify-content:center; pointer-events:none;
-  background:linear-gradient(180deg,#fff7e0 0%,#f4e3b2 55%,#e8cf92 100%);
-  border-bottom:4px solid #1c150c;
-  box-shadow:0 4px 0 #5a3a1e, 0 7px 13px rgba(0,0,0,0.6),
-             inset 0 0 30px rgba(255,255,255,0.55), inset 0 -10px 18px rgba(176,138,58,0.3);
+  background:#000;
 }
 #cTop .marquee{ width:100%; display:flex; align-items:center; justify-content:center; }
-#cTop .marquee svg{ width:96vw; height:auto; display:block; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.3)); }
+#cTop .marquee svg{
+  width:92vw; height:auto; display:block; image-rendering:pixelated;
+  filter:drop-shadow(0 0 18px rgba(255,150,0,0.7)) drop-shadow(0 0 40px rgba(255,60,0,0.4));
+  animation:pulse 2.5s ease-in-out infinite;
+}
 /* ── Control deck (bottom of cabinet) ── */
 #stick{
   box-sizing:content-box; position:fixed; left:0; right:0; bottom:0; z-index:46;
@@ -412,25 +412,25 @@ const CONFIG = {
   },
   // Per-level tuning. shopIds: A..H positions defined in the map.
   levels: [ null,
-  { // L1 — DAY ONE OF THE GRINDSET (deport all 20 — the full honeymoon grind)
+  { // L1 — DRAIN THE MAZE (deport all 20 — the full honeymoon grind)
     shopsOpen:['A','B','C','D','E','F'], shopsDark:[],
     ghosts:20, ghostSpeed:0.55, spawnRate:1.0, pellets:4,
     goal:{type:'deports', n:20}, drain:0.018, pCap:35,
     btc:[1000,1400], burger:null, spanishRatio:0, palette:'bright', music:'theme',
   },
-  { // L2 — THE PUMP IS REAL ("twenty ghosts gone" — he's just cleared all 20 in L1)
+  { // L2 — WE'RE SO BACK (card says "three ghosts down"; L1 actually clears 20)
     shopsOpen:['A','C','D','E','F'], shopsDark:['B'],
     ghosts:14, ghostSpeed:0.66, spawnRate:0.9, pellets:4,
     goal:{type:'deports', n:14}, drain:0.022, pCap:44,
     btc:[1400,6000], burger:null, spanishRatio:0, palette:'bright', music:'theme',
   },
-  { // L3 — BUILD THE WALL, BUILD THE BODY
+  { // L3 — ANY DAY NOW
     shopsOpen:['A','D','E','F'], shopsDark:['B','C'],
     ghosts:12, ghostSpeed:0.78, spawnRate:0.75, pellets:4,
     goal:{type:'deports', n:9}, drain:0.026, pCap:76,
     btc:[6000,18000], burger:null, spanishRatio:0, palette:'bright', music:'theme',
   },
-  { // L4 — WINNING SO MUCH
+  { // L4 — TIRED OF WINNING YET?
     shopsOpen:['A','E','F'], shopsDark:['B','C','D'],
     ghosts:10, ghostSpeed:0.88, spawnRate:0.55, pellets:3,
     goal:{type:'deports', n:8}, drain:0.030, pCap:86,
@@ -442,7 +442,7 @@ const CONFIG = {
     goal:{type:'deports', n:7}, drain:0.030, pCap:89,
     btc:[42000,94000], burger:[12.99,39.99], spanishRatio:0, palette:'fading', music:'theme',
   },
-  { // L6 — MINOR SETBACK
+  { // L6 — MY ORGANS WENT WOKE
     shopsOpen:['F'], shopsDark:['A','B','C','D','E','G','H'],
     ghosts:3, ghostSpeed:1.30, spawnRate:0.18, pellets:2,
     goal:{type:'deports', n:3}, drain:0.026, pCap:100,
@@ -454,7 +454,7 @@ const CONFIG = {
     goal:{type:'survive', sec:50}, drain:0.040,
     btc:[61000,0], btcStackEnd:6, burger:[400,400], spanishRatio:0, palette:'dead', music:'famine',
   },
-  { // L8 — REPLACEMENT (the maze flips fully to Spanish here)
+  { // L8 — THEY BROUGHT TACOS (the maze flips fully to Spanish here)
     taquerias:true, shopsOpen:[], shopsDark:['A','B','C','D','E','F','G','H'],
     ghosts:5, ghostSpeed:0.80, spawnRate:0, tacoRate:0.8, ghostJoinSec:10,
     goal:{type:'survive', sec:45}, drain:0,
@@ -478,15 +478,15 @@ const CONFIG = {
 //  TEXT — level cards (verbatim) + EN/ES string table
 // ═════════════════════════════════════════════════════════════════
 const CARDS = [ null,
- { t:'DAY ONE OF THE GRINDSET', q:`"America's been stolen from guys like me. But I'm done complaining. Time to eat big, lift big, and take my country back. One burger at a time."` },
- { t:'THE PUMP IS REAL', q:`"The deportations are already working and I can feel it. Things are starting to feel great again. More burgers for real Americans. They said deporting them would hurt the economy. Looks pretty good from where I'm chomping."` },
- { t:'BUILD THE WALL, BUILD THE BODY', q:`"Swole is a mindset. Every ghost over that wall is a job coming back. Any day now. The factories are basically already reopening."` },
- { t:'WINNING SO MUCH', q:`"Kinda weird that the burger joints keep closing when we're winning this hard. Probably the deep state. Anyway — bulk season never ends."` },
- { t:"IT'S CALLED BULKING", q:`"The scale doesn't measure freedom. I'm not fat, I'm a patriot in the offseason. Bitcoin's mooning, baby — burger's twelve bucks but I'm rich in freedom money."` },
- { t:'MINOR SETBACK', q:`"Doctor says my kidneys are quitting on me. Typical — even my organs are woke. Can't stop now. Three ghosts left in the whole map. Finish the job."` },
- { t:'MISSION ACCOMPLISHED', q:`"Did it. Every ghost gone. 100% American maze. Burgers are $400 now but I'm loaded — wait. Bitcoin crashed?? My whole stack's worth six bucks. SIX. Who do I even... there's no one left to sell it to."` },
- { t:'REPLACEMENT', q:`"The wall broke. They're pouring in and they brought... tacos? The signs all say ABIERTO. They don't even look scared of me. Why aren't they scared of me."` },
- { t:'RUN', t_es:'CORRE', q:`"Everything's in Spanish. The music's wrong. The flags are wrong. I eat their tacos and run but there's always more of them. This was supposed to be MY maze."` },
+ { t:'DRAIN THE MAZE', q:`"This maze is rigged against guys like me. Always has been. But I'm done coping. Time to drain it, one ghost at a time, and take my country back. Rise and grind."` },
+ { t:"WE'RE SO BACK", q:`"Three ghosts down and I can already feel it. More room. More burgers. More America for Americans. They swore deporting them would tank the economy. Looks pretty good from where I'm chomping. We're so back."` },
+ { t:'ANY DAY NOW', q:`"Swole is a mindset. Every ghost I push past that wall is a factory coming home. Any day now. Same energy as leg day. You build the wall, you build the body, you don't ask questions. Stay hard."` },
+ { t:'TIRED OF WINNING YET?', q:`"Kinda weird the burger joints keep closing while we're winning this hard. Has to be the deep state. Fake closures. Whatever. Bulk season never ends and I am not tired of winning."` },
+ { t:"IT'S CALLED BULKING", q:`"The scale doesn't measure freedom. I'm not fat, I'm a patriot in the offseason. Burger's twelve bucks now but who cares, Bitcoin's mooning and I'm rich in freedom money. Diamond hands. WAGMI."` },
+ { t:'MY ORGANS WENT WOKE', q:`"Doc says my kidneys are shutting down. Typical. Even my organs went woke on me. I did my own research, he's wrong. Couple ghosts left on the whole map. Push through. Embrace the suck."` },
+ { t:'MISSION ACCOMPLISHED', q:`"Did it. Every ghost gone. One hundred percent American maze. Burgers are four hundred bucks but I'm loaded, hold on. Bitcoin's six dollars? My whole stack is worth six dollars? Who do I even sell to. There's nobody left."` },
+ { t:'THEY BROUGHT TACOS', q:`"The wall broke. They poured back in and they brought tacos. Every sign says ABIERTO. They're not running from me. They're not scared of me. Why isn't anybody scared of me."` },
+ { t:'RUN', t_es:'CORRE', q:`"Everything's in Spanish now. The music's wrong, the flags are wrong, the whole maze is wrong. I grab a taco and run and there's always more of them. This was supposed to be MY maze."` },
  { t:'FIN DEL JUEGO, AMIGO', q:`...` },
 ];
 const STR = {
