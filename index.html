@@ -140,7 +140,7 @@ body.shell #stick{ display:block; }
 #cTop{
   box-sizing:border-box; position:fixed; top:0; left:0; right:0; z-index:46;
   height:calc(30vw + env(safe-area-inset-top)); padding-top:env(safe-area-inset-top);
-  display:flex; align-items:center; justify-content:center; pointer-events:none;
+  align-items:center; justify-content:center; pointer-events:none;
   background:linear-gradient(180deg,#fff7e0 0%,#f4e3b2 55%,#e8cf92 100%);
   border-bottom:4px solid #1c150c;
   box-shadow:0 4px 0 #5a3a1e, 0 7px 13px rgba(0,0,0,0.6),
@@ -1290,14 +1290,18 @@ const ctx=canvas.getContext('2d');
 // Render at the device pixel ratio for crispness, then CSS-scale the element to
 // fill the viewport (laptop = large, phone = fit, both orientations).
 let RS=Math.min(window.devicePixelRatio||1, 2);
-let consoleMode=false;   // portrait phone → handheld-console shell (logo + joystick)
+let consoleMode=false;   // portrait phone → arcade-cabinet shell (logo + joystick)
+let isPhone=false;       // touch device with a phone-sized screen (NOT desktop/tablet)
 function fitCanvas(){
   RS=Math.min(window.devicePixelRatio||1, 2);
   canvas.width=Math.round(CW*RS); canvas.height=Math.round(CH*RS);
   const vw=window.innerWidth, vh=window.innerHeight;
-  const touch=('ontouchstart' in window)||(navigator.maxTouchPoints>0)||
-              (window.matchMedia&&matchMedia('(pointer:coarse)').matches)||window.__forceDpad;
-  consoleMode = touch && vh>=vw;                 // portrait phone gets the console shell
+  const coarse=('ontouchstart' in window)||(navigator.maxTouchPoints>0)||
+               (window.matchMedia&&matchMedia('(pointer:coarse)').matches);
+  // Only phones get the cabinet: a coarse-pointer device whose smaller screen
+  // dimension is phone-sized. Desktops (even touchscreens) and tablets are excluded.
+  isPhone = window.__forceConsole || (coarse && Math.min(vw,vh)<=540);
+  consoleMode = isPhone && vh>=vw;               // cabinet shows only held vertically
   document.body.classList.toggle('console', consoleMode);
   document.body.style.paddingTop=''; document.body.style.paddingBottom='';
   let availW=vw, availH=vh;
@@ -2321,12 +2325,11 @@ if(stick){
   if(src&&mq){ const c=src.cloneNode(true); c.removeAttribute('id'); mq.appendChild(c); }
 })();
 function updateDpad(){
-  const touch = isTouch || window.__forceDpad;
   const onLanding = landingVisible();
-  // Portrait phones get the full console shell (logo + analog stick) whenever
-  // we're off the coin screen; landscape touch keeps the simple d-pad.
-  document.body.classList.toggle('shell', touch && consoleMode && !onLanding);
-  dpad.classList.toggle('show', touch && !consoleMode && gameState==='PLAYING' && !onLanding);
+  // Portrait phones get the full cabinet shell (logo + analog stick); a phone
+  // held in landscape keeps the simple d-pad. Desktop/tablet get neither.
+  document.body.classList.toggle('shell', consoleMode && !onLanding);
+  dpad.classList.toggle('show', isPhone && !consoleMode && gameState==='PLAYING' && !onLanding);
 }
 function resetGame(){
   hiScore=Math.max(hiScore,score);
