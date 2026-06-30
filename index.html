@@ -1330,18 +1330,44 @@ const PALETTES={
 };
 function pal(){ return PALETTES[L().palette]||PALETTES.bright; }
 
+// ── Flag maze: the walls render as a simplified Stars & Stripes ──
+// Blue canton (top-left) + 8 red/white horizontal stripes. Colors desaturate
+// with the level palette so the flag fades as the country collapses.
+const FLAG_CANTON_C=11, FLAG_CANTON_R=11, FLAG_STRIPE_H=3;
+function _desatDim(rgb,f,d){ const g=0.3*rgb[0]+0.59*rgb[1]+0.11*rgb[2];
+  return rgb.map(v=>(v+(g-v)*f)*(1-d)); }
+function _lighten(rgb,a){ return rgb.map(v=>Math.min(255,v+a)); }
+function _rgb(a){ return 'rgb('+Math.round(a[0])+','+Math.round(a[1])+','+Math.round(a[2])+')'; }
+function flagMood(){ const n=L().palette;
+  return { f:(n==='gray'?0.65:n==='dead'?0.82:n==='fading'?0.22:n==='vivid'?0.12:0),
+           d:(n==='dead'?0.32:n==='gray'?0.12:0) }; }
+function flagTileColor(c,r,mood){
+  let base;
+  if(c<FLAG_CANTON_C && r<FLAG_CANTON_R) base=[60,59,110];                  // canton blue
+  else base=(Math.floor(r/FLAG_STRIPE_H)%2===0)?[178,34,52]:[235,235,238];  // red / white
+  base=_desatDim(base,mood.f,mood.d);
+  return { base:_rgb(base), hi:_rgb(_lighten(base,16)) };
+}
 function drawWalls(){
-  const p=pal();
+  const mood=flagMood();
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
     const cell=mapData[r][c];
     if(cell===0) continue;
     // shop tiles whose shop isn't part of this level render as plain wall
     if(cell===2 && shops[MAP_SRC[r][c]]) continue;
     const x=SIDE+c*TILE, y=TOP+r*TILE;
-    ctx.fillStyle=p.wall; ctx.fillRect(x,y,TILE,TILE);
-    ctx.fillStyle=p.wall2; ctx.fillRect(x+1,y+1,TILE-2,TILE-2);
-    ctx.fillStyle=p.wall; ctx.fillRect(x+3,y+3,TILE-6,TILE-6);
+    const t=flagTileColor(c,r,mood);
+    ctx.fillStyle=t.base; ctx.fillRect(x,y,TILE,TILE);
+    ctx.fillStyle=t.hi;   ctx.fillRect(x+1,y+1,TILE-2,TILE-2);
+    ctx.fillStyle=t.base; ctx.fillRect(x+3,y+3,TILE-6,TILE-6);
   }
+  // white stars scattered across the canton
+  const sv=_desatDim([242,242,247],mood.f,mood.d);
+  ctx.fillStyle=_rgb(sv); ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.font='bold 13px Georgia,"Times New Roman",serif';
+  const sx=[SIDE+58,SIDE+132,SIDE+206], sy=[TOP+72,TOP+170];
+  for(const yy of sy) for(const xx of sx) ctx.fillText('★',xx,yy);
+  ctx.textBaseline='alphabetic';
   // Border wall at top — the wall ghosts get launched over
   ctx.fillStyle= level>=8 ? '#6B4B3A':'#8A8A92';
   ctx.fillRect(SIDE,TOP-6,GW,8);
