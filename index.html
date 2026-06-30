@@ -507,7 +507,7 @@ const CONFIG = {
   { // L5 — IT'S CALLED BULKING
     shopsOpen:['E','F','G'], shopsDark:['A','B','C','D','H'],
     ghosts:8, ghostSpeed:1.20, spawnRate:0.40, pellets:2,
-    goal:{type:'deports', n:7}, drain:0.030, pCap:89,
+    goal:{type:'deports', n:7}, drain:0.030, pCap:95,  // ceiling reaches RENAL — kidneys go at L5 now
     btc:[42000,94000], burger:[12.99,39.99], spanishRatio:0, palette:'fading', music:'theme',
   },
   { // L6 — MY ORGANS WENT WOKE
@@ -772,8 +772,8 @@ function makePac(){
 // Once he's been heavy, weight is sticky and there's a floor he can't drop below —
 // he can't get lean/fast again, which is the whole trap.
 function proteinFloor(){
-  if(pac.everRenal) return 72;   // renal → stays mostly fat/bloated
-  if(pac.everFat)   return 56;   // fat → can never get back to lean, fast BUFF
+  if(pac.everRenal) return 88;   // renal → stays heavy/slow, slipping into renal disease whenever he eats
+  if(pac.everFat)   return 66;   // fat → clings near the FAT line, never lean/fast again
   return 0;
 }
 function pacSpeed(){
@@ -823,8 +823,8 @@ function updatePac(){
   // Meter drain — eating is his only verb
   if(!pac.withered){
     let drain=L().drain;
-    // once fat, the weight clings: losing it is slow and grinding
-    if(pac.everFat && pac.protein>proteinFloor()+4) drain*=0.4;
+    // once fat, the weight clings hard: shedding it is slow and grinding
+    if(pac.everFat && pac.protein>proteinFloor()+4) drain*=0.28;
     pac.protein=Math.max(proteinFloor(), pac.protein-drain);
     // famine never fully wastes him now — he stays mainly bloated, just greener (see drawPac)
   }
@@ -856,6 +856,11 @@ function updatePac(){
     if(dx*dx+dy*dy<(eatR+2)*(eatR+2)){
       p.active=false; p.respawn=CONFIG.pelletRespawnSec*60; score+=CONFIG.pelletPoints;
       sfxPellet();
+      // tallow / raw milk / colostrum are pure calories — they pack on weight like a burger
+      if(!pac.withered && CALORIE_PELLETS.has(p.label)){
+        const cap=L().pCap!==undefined?L().pCap:100;
+        pac.protein=Math.min(Math.max(cap,pac.protein),pac.protein+CONFIG.burgerProtein);
+      }
       for(const g of ghosts) if(g.state==='ROAM'||g.state==='WORK'||g.state==='FLEE')
         { g.state='FRIGHT'; g.frightLeft=CONFIG.frightenedSec*60; }
       addFloater(p.x,p.y,p.label,'#7FE0FF');
@@ -1208,6 +1213,8 @@ function loseLife(){
 //  LEVEL FLOW
 // ═════════════════════════════════════════════════════════════════
 const PELLET_LABELS=['RAW MILK','PEPTIDES','BEEF TALLOW','COLOSTRUM'];
+// these supplements are pure calories — eating them packs on weight like a burger
+const CALORIE_PELLETS=new Set(['RAW MILK','BEEF TALLOW','COLOSTRUM']);
 function startLevel(n){
   level=n; levelTimer=0; ghostJoinTimer=0; famineFlags={};
   foods=[]; pellets=[]; floaters=[]; breachAnim=0;
@@ -1218,7 +1225,7 @@ function startLevel(n){
     withered: n>=8,
   });
   if(n===6) pac.protein=92;            // RENAL by design
-  if(n===5) pac.protein=78;            // FAT by design
+  if(n===5) pac.protein=92;            // RENAL DISEASE by design (kidneys go a level sooner)
   if(n===4&&pac.protein<60) pac.protein=62;
   if(n>=8){ pac.y=py(ROWS-2); }        // start at the bottom, away from the breach
   // supplements
@@ -1761,15 +1768,17 @@ function drawPacSprite(x,y,st,facing,mouth,deadAnim){
   ctx.beginPath(); ctx.moveTo(0,0);
   ctx.arc(0,0,r,m,Math.PI*2-m); ctx.closePath();
   ctx.fillStyle=STATE_COLOR[st]; ctx.fill();
-  if(st==='RENAL'){ // pale gray tint, sickly
+  if(st==='RENAL' || (typeof pac!=='undefined' && pac && pac.everRenal)){ // pale gray tint, sickly — lingers after renal disease
     ctx.globalAlpha=0.35; ctx.fillStyle='#9AA8A0';
     ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,r,m,Math.PI*2-m); ctx.closePath(); ctx.fill();
     ctx.globalAlpha=1;
   }
-  // sickness green: ramps through the famine (L7) and stays on the terminal bloated body
+  // sickness green: ramps through the famine (L7) and stays on the terminal bloated body;
+  // also lingers permanently once the kidneys have gone (renal disease)
   let green=0;
   if(st==='WITHERED') green=0.55;
   else if(level===7) green=Math.min(0.55, levelTimer/(18*60));
+  else if(typeof pac!=='undefined' && pac && pac.everRenal) green=0.5;
   if(green>0){
     ctx.globalAlpha=green; ctx.fillStyle='#5FA84B';
     ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,r,m,Math.PI*2-m); ctx.closePath(); ctx.fill();
@@ -1965,8 +1974,9 @@ function drawHUD(){
   ctx.fillText(glitchText('PROTEIN',T('PROTEIN')),0,0);
   ctx.restore();
   // state word (flips to Spanish with the rest of the HUD)
-  ctx.fillStyle=meterCol; ctx.font='bold 8px monospace'; ctx.textAlign='center';
-  ctx.fillText(spanishRatio>=0.35?STATE_ES[st]:st,SIDE/2,my+mh+14);
+  const stWord = spanishRatio>=0.35 ? STATE_ES[st] : (st==='RENAL'?'RENAL DISEASE':st);
+  ctx.fillStyle=meterCol; ctx.font='bold '+(stWord.length>8?7:8)+'px monospace'; ctx.textAlign='center';
+  ctx.fillText(stWord,SIDE/2,my+mh+14);
   // lives — Confederate flags, bottom-left
   ctx.fillStyle='#8899AA'; ctx.font='8px monospace';
   ctx.fillText(glitchText('LIVES',T('LIVES')),SIDE/2,my+mh+30);
