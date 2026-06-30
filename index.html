@@ -123,16 +123,13 @@ html, body {
 #cTop, #stick{ display:none; }
 body.console{
   background:#000;                                    /* black cabinet, like the landing */
-  padding-top:calc(30vw + env(safe-area-inset-top));  /* full-width marquee logo */
-  padding-bottom:calc(244px + env(safe-area-inset-bottom));
+  padding-top:calc(28vw + env(safe-area-inset-top));  /* marquee logo fills the top */
+  padding-bottom:calc(184px + env(safe-area-inset-bottom));  /* shorter control deck → bigger screen */
 }
-/* the game "screen" — a CRT behind a black bezel with a gold inner trim.
-   On the portrait phone the canvas is a tall portrait surface using the native
-   vertical-flag maze (see applyLayout) — no rotation, everything upright. */
+/* the game "screen" — a flat, edge-to-edge surface separated from the cabinet
+   marquee/deck by simple horizontal lines (no rounded bezel). */
 body.console #gameCanvas{
-  position:relative; border-radius:14px; max-width:none; max-height:none;
-  box-shadow:0 0 0 7px #07070b, 0 0 0 10px #2b2f3e, 0 0 0 12px rgba(255,215,0,0.45),
-             0 14px 32px rgba(0,0,0,0.75), inset 0 0 34px rgba(0,0,0,0.8);
+  position:relative; border-radius:0; max-width:none; max-height:none;
 }
 body.shell #cTop{ display:flex; }
 body.shell #stick{ display:block; }
@@ -140,32 +137,34 @@ body.shell #stick{ display:block; }
 /* full-width logo on black — glowing + throbbing exactly like the landing screen */
 #cTop{
   box-sizing:border-box; position:fixed; top:0; left:0; right:0; z-index:46;
-  height:calc(30vw + env(safe-area-inset-top)); padding-top:env(safe-area-inset-top);
+  height:calc(28vw + env(safe-area-inset-top)); padding-top:env(safe-area-inset-top);
   align-items:center; justify-content:center; pointer-events:none;
-  background:#000;
+  background:#000; border-bottom:2px solid rgba(255,215,0,0.5);  /* line separating marquee from screen */
 }
 #cTop .marquee{ width:100%; display:flex; align-items:center; justify-content:center; }
 #cTop .marquee svg{
-  width:92vw; height:auto; display:block; image-rendering:pixelated;
+  width:auto; max-width:96vw; max-height:26vw; height:auto; display:block; image-rendering:pixelated;
   filter:drop-shadow(0 0 18px rgba(255,150,0,0.7)) drop-shadow(0 0 40px rgba(255,60,0,0.4));
   animation:pulse 2.5s ease-in-out infinite;
 }
 /* ── Control deck (bottom of cabinet) ── */
 #stick{
   box-sizing:content-box; position:fixed; left:0; right:0; bottom:0; z-index:46;
-  height:244px; padding-bottom:env(safe-area-inset-bottom);
+  height:184px; padding-bottom:env(safe-area-inset-bottom);
   background:
     radial-gradient(150% 90% at 50% 130%, #1b1d29 0%, #0b0b11 78%),
     linear-gradient(180deg,#13141b,#0a0a10);
-  border-top:3px solid #000;
-  box-shadow:0 -3px 0 #3a2614, 0 -6px 12px rgba(0,0,0,0.5);  /* wood shelf line */
+  border-top:2px solid rgba(255,215,0,0.5);  /* line separating screen from control deck */
+  box-shadow:0 -6px 12px rgba(0,0,0,0.5);
   touch-action:none; user-select:none; -webkit-tap-highlight-color:transparent;
 }
-/* classic control-panel art: Pac-Man chasing the ghosts */
+/* classic control-panel art: Pac-Man + ghosts flanking the joystick, left & right */
 #stick .decals{
-  position:absolute; top:15px; left:0; right:0;
-  display:flex; align-items:center; justify-content:center; gap:15px; pointer-events:none;
+  position:absolute; top:50%; transform:translateY(-50%);
+  display:flex; flex-direction:column; align-items:center; gap:16px; pointer-events:none;
 }
+#stick .decals.left{ left:7vw; }
+#stick .decals.right{ right:7vw; }
 #stick .decals .pac{
   width:20px; height:20px; border-radius:50%;
   background:conic-gradient(from 33deg at 56% 50%, #FFD23F 0 296deg, transparent 296deg 360deg);
@@ -175,7 +174,7 @@ body.shell #stick{ display:block; }
 #stick .decals .gh svg{ width:100%; height:100%; display:block; }
 /* ── Joystick: classic red ball on a dished metal base ── */
 #stick .base{
-  position:absolute; left:50%; top:calc(50% + 16px); width:164px; height:164px; margin:-82px 0 0 -82px;
+  position:absolute; left:50%; top:calc(50% + 8px); width:164px; height:164px; margin:-82px 0 0 -82px;
   border-radius:50%;
   background:radial-gradient(circle at 50% 38%, #2e3142 0%, #15161f 58%, #2a2e3d 79%, #0a0b10 100%);
   border:4px solid #05060a;
@@ -228,11 +227,14 @@ body.shell #stick{ display:block; }
 <!-- Portrait arcade-cabinet shell (touch + portrait): marquee + control deck -->
 <div id="cTop" aria-hidden="true"><div class="marquee" id="marquee"></div></div>
 <div id="stick" aria-hidden="true">
-  <div class="decals">
+  <div class="decals left">
     <span class="pac"></span>
     <span class="gh" style="--c:#E32127"><svg viewBox="0 0 28 26"><path d="M3 13a11 11 0 0 1 22 0v11l-3.7-2.6L17.6 24 14 21.4 10.4 24 6.7 21.4 3 24z" fill="currentColor"/><circle cx="10.5" cy="12" r="3" fill="#fff"/><circle cx="17.5" cy="12" r="3" fill="#fff"/><circle cx="11.6" cy="12" r="1.5" fill="#16209c"/><circle cx="18.6" cy="12" r="1.5" fill="#16209c"/></svg></span>
-    <span class="gh" style="--c:#F25CA2"><svg viewBox="0 0 28 26"><path d="M3 13a11 11 0 0 1 22 0v11l-3.7-2.6L17.6 24 14 21.4 10.4 24 6.7 21.4 3 24z" fill="currentColor"/><circle cx="10.5" cy="12" r="3" fill="#fff"/><circle cx="17.5" cy="12" r="3" fill="#fff"/><circle cx="11.6" cy="12" r="1.5" fill="#16209c"/><circle cx="18.6" cy="12" r="1.5" fill="#16209c"/></svg></span>
     <span class="gh" style="--c:#3FE0E0"><svg viewBox="0 0 28 26"><path d="M3 13a11 11 0 0 1 22 0v11l-3.7-2.6L17.6 24 14 21.4 10.4 24 6.7 21.4 3 24z" fill="currentColor"/><circle cx="10.5" cy="12" r="3" fill="#fff"/><circle cx="17.5" cy="12" r="3" fill="#fff"/><circle cx="11.6" cy="12" r="1.5" fill="#16209c"/><circle cx="18.6" cy="12" r="1.5" fill="#16209c"/></svg></span>
+  </div>
+  <div class="decals right">
+    <span class="pac"></span>
+    <span class="gh" style="--c:#F25CA2"><svg viewBox="0 0 28 26"><path d="M3 13a11 11 0 0 1 22 0v11l-3.7-2.6L17.6 24 14 21.4 10.4 24 6.7 21.4 3 24z" fill="currentColor"/><circle cx="10.5" cy="12" r="3" fill="#fff"/><circle cx="17.5" cy="12" r="3" fill="#fff"/><circle cx="11.6" cy="12" r="1.5" fill="#16209c"/><circle cx="18.6" cy="12" r="1.5" fill="#16209c"/></svg></span>
     <span class="gh" style="--c:#FFA64D"><svg viewBox="0 0 28 26"><path d="M3 13a11 11 0 0 1 22 0v11l-3.7-2.6L17.6 24 14 21.4 10.4 24 6.7 21.4 3 24z" fill="currentColor"/><circle cx="10.5" cy="12" r="3" fill="#fff"/><circle cx="17.5" cy="12" r="3" fill="#fff"/><circle cx="11.6" cy="12" r="1.5" fill="#16209c"/><circle cx="18.6" cy="12" r="1.5" fill="#16209c"/></svg></span>
   </div>
   <div class="base">
@@ -1361,7 +1363,7 @@ function fitCanvas(){
     // insets — read the resolved padding so the "screen" fills the gap exactly.
     const cs=getComputedStyle(document.body);
     availH = vh - (parseFloat(cs.paddingTop)||0) - (parseFloat(cs.paddingBottom)||0);
-    availW = vw - 16;
+    availW = vw;                                   // edge-to-edge screen
   }
   const scale=Math.min(availW/CW, availH/CH);      // largest aspect-preserving fit
   canvas.style.width=Math.round(CW*scale)+'px';
