@@ -1334,11 +1334,13 @@ function handleDeath(){
     gameState='KILLSCREEN'; killScreenT=0; return;
   }
   if(lives<=0){ gameState='GAMEOVER'; gameoverTimer=0; stopMusic(); return; }
-  // respawn at the spot farthest from danger
+  // respawn at the spot farthest from danger — derived from the CURRENT maze size
+  // (landscape vs portrait differ), guarding against out-of-bounds cells
   pac.dead=false; pac.deadAnim=0; pac.invinc=240;
-  const spots=[[11,11],[1,1],[21,1],[1,21],[21,21],[11,21],[1,11],[21,11]]
-    .filter(([c,r])=>mapData[r][c]===0);
-  let best=spots[0],bd=-1;
+  const cand=[[CENTER_C,CENTER_R],[1,1],[COLS-2,1],[1,ROWS-2],[COLS-2,ROWS-2],
+              [CENTER_C,1],[CENTER_C,ROWS-2],[1,CENTER_R],[COLS-2,CENTER_R]];
+  const spots=cand.filter(([c,r])=>r>=0&&r<ROWS&&c>=0&&c<COLS&&mapData[r]&&mapData[r][c]===0);
+  let best=spots[0]||[CENTER_C,CENTER_R],bd=-1;
   for(const [c,r] of spots){
     let md=1e9;
     for(const g of ghosts) if(g.state==='CHASE'||g.state==='MIGRATE')
@@ -1804,8 +1806,10 @@ function drawPacSprite(x,y,st,facing,mouth,deadAnim){
     ctx.strokeStyle='rgba(0,0,0,0.2)'; ctx.lineWidth=1.5;
     ctx.beginPath(); ctx.arc(0,r*0.35,r*0.5,Math.PI*0.15,Math.PI*0.85); ctx.stroke();
   }
-  // the red cap (from the prototype's drawing math)
+  // the red cap (from the prototype's drawing math) — stays solid even while the
+  // body does its sickly WITHERED flicker, so the hat never looks transparent
   ctx.save();
+  ctx.globalAlpha=1;
   ctx.translate(-r*0.20,-r*0.70); ctx.rotate(-0.22); ctx.scale(1.35,1.35);
   const hatRed='#E32127';
   ctx.fillStyle=hatRed;
