@@ -527,25 +527,25 @@ function T(key){
 const MAP_SRC = [
 '#######################',
 '#o...................o#',
-'#.###.#####.#####.###.#',
-'#.AAA.#####.#####.BBB.#',
-'#.AAA.#####.#####.BBB.#',
-'#.......###.###.......#',
-'#.#####.###.###.#####.#',
-'#.#####.CCC.DDD.#####.#',
-'#.#####.CCC.DDD.#####.#',
-'#.###.............###.#',
-'#.###.###.....###.###.#',
-'..###.###.....###.###..',
-'#.###.###.....###.###.#',
-'#.###.............###.#',
-'#.#####.###.###.#####.#',
-'#.#####.EEE.FFF.#####.#',
-'#.#####.EEE.FFF.#####.#',
+'#.#########.####.####.#',
+'#.#########.####.####.#',
+'#.#########...........#',
+'#.#########.AAA#.BBB#.#',
+'#.#########.AAA#.BBB#.#',
+'#.#########...........#',
+'#.#########.####.####.#',
+'#.#########.####.####.#',
 '#.....................#',
-'#.###.#####.#####.###.#',
-'#.GGG.#####.#####.HHH.#',
-'#.GGG.#####.#####.HHH.#',
+'.......................',
+'#.CCC#.DDD#.####.EEE#.#',
+'#.CCC#.DDD#.####.EEE#.#',
+'#.....................#',
+'#.FFF#.####.####.GGG#.#',
+'#.FFF#.####.####.GGG#.#',
+'#.....................#',
+'#.####.HHH#.####.####.#',
+'#.####.HHH#.####.####.#',
+'#.....................#',
 '#o...................o#',
 '#######################',
 ];
@@ -1343,8 +1343,8 @@ function flagMood(){ const n=L().palette;
            d:(n==='dead'?0.32:n==='gray'?0.12:0) }; }
 function flagTileColor(c,r,mood){
   let base;
-  if(c<FLAG_CANTON_C && r<FLAG_CANTON_R) base=[60,59,110];                  // canton blue
-  else base=(Math.floor(r/FLAG_STRIPE_H)%2===0)?[178,34,52]:[235,235,238];  // red / white
+  if(c>=2&&c<=10&&r>=2&&r<=9) base=[60,59,110];                             // canton blue (the box)
+  else { const band=Math.max(0,Math.floor((r-2)/3)); base=(band%2===0)?[178,34,52]:[235,235,238]; } // stripes
   base=_desatDim(base,mood.f,mood.d);
   return { base:_rgb(base), hi:_rgb(_lighten(base,16)) };
 }
@@ -1365,7 +1365,7 @@ function drawWalls(){
   const sv=_desatDim([242,242,247],mood.f,mood.d);
   ctx.fillStyle=_rgb(sv); ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.font='bold 13px Georgia,"Times New Roman",serif';
-  const sx=[SIDE+58,SIDE+132,SIDE+206], sy=[TOP+72,TOP+170];
+  const sx=[SIDE+84,SIDE+156,SIDE+228], sy=[TOP+108,TOP+180];
   for(const yy of sy) for(const xx of sx) ctx.fillText('★',xx,yy);
   ctx.textBaseline='alphabetic';
   // Border wall at top — the wall ghosts get launched over
