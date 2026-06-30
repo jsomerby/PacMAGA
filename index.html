@@ -127,8 +127,8 @@ body.console{
   padding-bottom:calc(244px + env(safe-area-inset-bottom));
 }
 /* the game "screen" — a CRT behind a black bezel with a gold inner trim.
-   On the portrait phone the canvas is a tall portrait surface (the maze is rotated
-   90° in-render, with an upright HUD band on top — see drawGameScene/fitCanvas). */
+   On the portrait phone the canvas is a tall portrait surface using the native
+   vertical-flag maze (see applyLayout) — no rotation, everything upright. */
 body.console #gameCanvas{
   position:relative; border-radius:14px; max-width:none; max-height:none;
   box-shadow:0 0 0 7px #07070b, 0 0 0 10px #2b2f3e, 0 0 0 12px rgba(255,215,0,0.45),
@@ -373,20 +373,26 @@ body.shell #stick{ display:block; }
 // ═════════════════════════════════════════════════════════════════
 
 // ── Layout constants ──
-const TILE=24, COLS=27, ROWS=19;           // flag aspect (~1.4:1)
-const CENTER_C=COLS>>1, CENTER_R=ROWS>>1;  // 13, 9 — spawn + tunnel + ghost-gate column/row
-const GW=COLS*TILE, GH=ROWS*TILE;          // 648 × 456
+const TILE=24;
 const SIDE=78, HUDH=58, STRIP=46, BOT=22;  // STRIP = visible land beyond the wall
 const TOP=HUDH+STRIP;                      // maze starts below HUD + deportation strip
-const CW=SIDE+GW, CH=TOP+GH+BOT;
-
-// ── Portrait-phone layout: the maze rotates 90° into a tall canvas, with an
-//    upright HUD band on top. PF_SRC is the landscape playfield rect (deportation
-//    strip + maze) that gets rotated; HB is the upright HUD band height. ──
-const PF_SRC_W=GW, PF_SRC_H=TOP+GH-HUDH;   // 744 × 454 (strip + maze)
-const HB=104, SP=8, SPB=10;                // hud-band height, side pad, bottom pad
-const PORT_W=SP+PF_SRC_H+SP;               // 470  → rotated maze width + pads
-const PORT_H=HB+PF_SRC_W+SPB;              // 858  → hud band + rotated maze height
+// Two flag layouts, both authored UPRIGHT (no canvas rotation, so Pac/ghosts/shops
+// always render right-way-up): a WIDE horizontal-stripe flag for desktop/landscape,
+// and a TALL vertical-stripe flag (canton top-LEFT) for portrait phones.
+const FLAG_LANDSCAPE={canton:{c0:2,c1:12,r0:2,r1:8}, axis:'h'};  // horizontal stripes
+const FLAG_PORTRAIT ={canton:{c0:2,c1:8,  r0:2,r1:8}, axis:'v'}; // vertical stripes
+// active layout — mutated by applyLayout(); defaults are filled in once the maps exist
+let MAP_SRC, COLS, ROWS, CENTER_C, CENTER_R, GW, GH, CW, CH, TUNNEL_ROW, FLAG;
+function applyLayout(portrait){
+  const m = portrait ? MAP_PORTRAIT : MAP_LANDSCAPE;
+  if(MAP_SRC===m) return false;            // already on this layout
+  MAP_SRC=m; FLAG = portrait?FLAG_PORTRAIT:FLAG_LANDSCAPE;
+  ROWS=m.length; COLS=m[0].length;
+  CENTER_C=COLS>>1; CENTER_R=ROWS>>1; TUNNEL_ROW=CENTER_R;   // spawn / tunnel / ghost-gate
+  GW=COLS*TILE; GH=ROWS*TILE;
+  CW=SIDE+GW; CH=TOP+GH+BOT;
+  return true;
+}
 
 // ═════════════════════════════════════════════════════════════════
 //  CONFIG — every tunable in one place. The game's argument is math;
@@ -429,8 +435,8 @@ const CONFIG = {
     goal:{type:'deports', n:20}, drain:0.018, pCap:35,
     btc:[1000,1400], burger:null, spanishRatio:0, palette:'bright', music:'theme',
   },
-  { // L2 — WE'RE SO BACK (card says "three ghosts down"; L1 actually clears 20)
-    shopsOpen:['A','C','D','E','F'], shopsDark:['B'],
+  { // L2 — WE'RE SO BACK (all joints still open; closures don't begin until L3)
+    shopsOpen:['A','B','C','D','E','F'], shopsDark:[],
     ghosts:14, ghostSpeed:0.66, spawnRate:0.9, pellets:4,
     goal:{type:'deports', n:14}, drain:0.022, pCap:44,
     btc:[1400,6000], burger:null, spanishRatio:0, palette:'bright', music:'theme',
@@ -535,19 +541,20 @@ function T(key){
 // ═════════════════════════════════════════════════════════════════
 //  MAZE — '#' wall, '.' path, letters = shop tiles (solid), 'o' pellet spots
 // ═════════════════════════════════════════════════════════════════
-const MAP_SRC = [
+// Desktop / landscape: wide horizontal-stripe flag (27×19)
+const MAP_LANDSCAPE = [
 '###########################',
 '#o.......................o#',
 '#.###########.###.###.###.#',
-'#.###########.AAA.BBB.CCC.#',
-'#.###########.AAA.BBB.CCC.#',
+'#.###########.AAA.###.BBB.#',
+'#.###########.AAA.###.BBB.#',
 '#.###########.............#',
-'#.###########.###.###.###.#',
-'#.###########.###.###.###.#',
+'#.###########.###.CCC.###.#',
+'#.###########.###.CCC.###.#',
 '#.###########.###.###.###.#',
 '...........................',
-'#.DDD.EEE.###.###.FFF.###.#',
-'#.DDD.EEE.###.###.FFF.###.#',
+'#.DDD.###.###.EEE.###.FFF.#',
+'#.DDD.###.###.EEE.###.FFF.#',
 '#.###.###.###.###.###.###.#',
 '#.........................#',
 '#.###.###.###.###.###.###.#',
@@ -556,7 +563,33 @@ const MAP_SRC = [
 '#o.......................o#',
 '###########################',
 ];
-const TUNNEL_ROW=CENTER_R;  // side tunnels wrap to the opposite edge (center row)
+// Portrait phone: tall vertical-stripe flag, canton top-LEFT (19×23)
+const MAP_PORTRAIT = [
+'###################',
+'#o...............o#',
+'#.#######.AAA.###.#',
+'#.#######.AAA.###.#',
+'#.#######.###.###.#',
+'#.#######.........#',
+'#.#######.###.BBB.#',
+'#.#######.###.BBB.#',
+'#.#######.###.###.#',
+'#.................#',
+'#.###.###.###.###.#',
+'...................',
+'#.###.###.###.###.#',
+'#.................#',
+'#.CCC.###.DDD.EEE.#',
+'#.CCC.###.DDD.EEE.#',
+'#.###.###.###.###.#',
+'#.................#',
+'#.HHH.FFF.###.GGG.#',
+'#.HHH.FFF.###.GGG.#',
+'#.###.###.###.###.#',
+'#o...............o#',
+'###################',
+];
+applyLayout(false);   // start in landscape; fitCanvas() switches to portrait on phones
 let mapData=[];            // 0 path, 1 wall, 2 shop tile
 let shopDefs={};           // id → {tiles:[{c,r}], cx,cy, frontTile}
 let pelletSpots=[];        // {c,r}
@@ -1299,7 +1332,6 @@ const ctx=canvas.getContext('2d');
 let RS=Math.min(window.devicePixelRatio||1, 2);
 let consoleMode=false;   // portrait phone → arcade-cabinet shell (logo + joystick)
 let isPhone=false;       // touch device with a phone-sized screen (NOT desktop/tablet)
-let VW=CW, VH=CH;        // active logical canvas size (portrait in console mode)
 function fitCanvas(){
   RS=Math.min(window.devicePixelRatio||1, 2);
   const vw=window.innerWidth, vh=window.innerHeight;
@@ -1310,10 +1342,12 @@ function fitCanvas(){
   isPhone = window.__forceConsole || (coarse && Math.min(vw,vh)<=540);
   consoleMode = isPhone && vh>=vw;               // cabinet shows only held vertically
   document.body.classList.toggle('console', consoleMode);
-  // Portrait phone uses a tall canvas (maze rotated in-render); everyone else landscape.
-  VW = consoleMode ? PORT_W : CW;
-  VH = consoleMode ? PORT_H : CH;
-  canvas.width=Math.round(VW*RS); canvas.height=Math.round(VH*RS);
+  // Portrait phone → tall vertical-flag maze; everyone else → wide flag. Switching
+  // mid-game rebuilds the level for the new dimensions.
+  if(applyLayout(consoleMode) && typeof gameState!=='undefined' && gameState==='PLAYING' && pac){
+    startLevel(level);
+  }
+  canvas.width=Math.round(CW*RS); canvas.height=Math.round(CH*RS);
   canvas.style.transform='';
   document.body.style.paddingTop=''; document.body.style.paddingBottom='';
   let availW=vw, availH=vh;
@@ -1324,9 +1358,9 @@ function fitCanvas(){
     availH = vh - (parseFloat(cs.paddingTop)||0) - (parseFloat(cs.paddingBottom)||0);
     availW = vw - 16;
   }
-  const scale=Math.min(availW/VW, availH/VH);      // largest aspect-preserving fit
-  canvas.style.width=Math.round(VW*scale)+'px';
-  canvas.style.height=Math.round(VH*scale)+'px';
+  const scale=Math.min(availW/CW, availH/CH);      // largest aspect-preserving fit
+  canvas.style.width=Math.round(CW*scale)+'px';
+  canvas.style.height=Math.round(CH*scale)+'px';
 }
 fitCanvas();
 window.addEventListener('resize', fitCanvas);
@@ -1343,9 +1377,9 @@ const PALETTES={
 function pal(){ return PALETTES[L().palette]||PALETTES.bright; }
 
 // ── Flag maze: the walls render as a simplified Stars & Stripes ──
-// Blue canton (top-left, cols 2–12 × rows 2–8) with white boxes + uniform 3-tall
-// red/white stripe bands + an all-red outer border. Colors desaturate with the
-// level palette so the flag fades as the country collapses. Rotated 90° on phones.
+// Blue canton (top-left) with white boxes + 3-wide red/white stripe bands + an
+// all-red outer border. Desktop uses horizontal stripes (wide flag); portrait
+// phones use vertical stripes (tall flag) via FLAG. Colors desaturate per level.
 function _desatDim(rgb,f,d){ const g=0.3*rgb[0]+0.59*rgb[1]+0.11*rgb[2];
   return rgb.map(v=>(v+(g-v)*f)*(1-d)); }
 function _lighten(rgb,a){ return rgb.map(v=>Math.min(255,v+a)); }
@@ -1353,11 +1387,22 @@ function _rgb(a){ return 'rgb('+Math.round(a[0])+','+Math.round(a[1])+','+Math.r
 function flagMood(){ const n=L().palette;
   return { f:(n==='gray'?0.65:n==='dead'?0.82:n==='fading'?0.22:n==='vivid'?0.12:0),
            d:(n==='dead'?0.32:n==='gray'?0.12:0) }; }
+// Six-stripe pride palette — the flag the maze becomes once America is "replaced".
+const PRIDE=[[228,3,3],[255,140,0],[255,237,0],[0,128,38],[0,77,255],[117,7,135]];
+function isRainbow(){ return level>=8; }   // the REPLACEMENT era flies the rainbow flag
 function flagTileColor(c,r,mood){
-  let base;
+  if(isRainbow()){
+    // pride flag: 6 rainbow bands across the maze (vertical on phones), no canton
+    const span=(FLAG.axis==='v'?COLS:ROWS), pos=(FLAG.axis==='v'?c:r);
+    const i=Math.max(0,Math.min(PRIDE.length-1,Math.floor(pos/span*PRIDE.length)));
+    const base=_desatDim(PRIDE[i].slice(),mood.f*0.3,0);     // stays vivid
+    return { base:_rgb(base), hi:_rgb(_lighten(base,18)) };
+  }
+  let base; const ct=FLAG.canton;
   if(c===0||c===COLS-1||r===0||r===ROWS-1) base=[178,34,52];                 // outer border: all red
-  else if(c>=2&&c<=12&&r>=2&&r<=8) base=[60,59,110];                         // canton blue (the box, top-left)
-  else { const band=Math.floor((r-2)/4); base=(band%2===0)?[178,34,52]:[235,235,238]; } // uniform 3-tall red/white stripes
+  else if(c>=ct.c0&&c<=ct.c1&&r>=ct.r0&&r<=ct.r1) base=[60,59,110];          // canton blue (top-left box)
+  else { const band=Math.floor(((FLAG.axis==='v'?c:r)-2)/4);                 // 3-wide stripes (vertical on phones)
+         base=(band%2===0)?[178,34,52]:[235,235,238]; }
   base=_desatDim(base,mood.f,mood.d);
   return { base:_rgb(base), hi:_rgb(_lighten(base,16)) };
 }
@@ -1375,11 +1420,13 @@ function drawWalls(){
     ctx.fillStyle=t.base; ctx.fillRect(x+3,y+3,TILE-6,TILE-6);
   }
   // white boxes regularly interspersed across the blue canton — alludes to the star field
-  const sv=_desatDim([240,240,245],mood.f,mood.d);
-  ctx.fillStyle=_rgb(sv);
-  const bs=Math.round(TILE*0.42);
-  for(let r=3;r<=7;r+=2) for(let c=3;c<=11;c+=2){
-    ctx.fillRect(SIDE+px(c)-bs/2, py(r)-bs/2, bs, bs);
+  if(!isRainbow()){                          // pride flag has no canton / star field
+    const sv=_desatDim([240,240,245],mood.f,mood.d);
+    ctx.fillStyle=_rgb(sv);
+    const bs=Math.round(TILE*0.42), ct=FLAG.canton;
+    for(let r=ct.r0+1;r<=ct.r1;r+=2) for(let c=ct.c0+1;c<=ct.c1;c+=2){
+      ctx.fillRect(SIDE+px(c)-bs/2, py(r)-bs/2, bs, bs);
+    }
   }
   // Border wall at top — the wall ghosts get launched over
   ctx.fillStyle= level>=8 ? '#6B4B3A':'#8A8A92';
@@ -1890,7 +1937,6 @@ function wrapText(txt,maxW,font){
   return lines;
 }
 function drawCard(){
-  const CW=VW, CH=VH;                 // center on the active canvas (portrait on phones)
   ctx.fillStyle='#000005'; ctx.fillRect(0,0,CW,CH);
   ctx.save(); ctx.globalAlpha=cardAlpha;
   const card=CARDS[level];
@@ -1932,7 +1978,6 @@ function drawCard(){
   ctx.restore();
 }
 function drawAttract(){
-  const CW=VW, CH=VH;
   ctx.fillStyle='#000011'; ctx.fillRect(0,0,CW,CH);
   for(let i=0;i<70;i++){
     const sx=(i*137+tick*0.3)%CW, sy=(i*97)%CH;
@@ -1968,7 +2013,6 @@ function drawAttract(){
 const PROPAGANDA='NOW HIRING WINNING PRE-WORKOUT TEST BOOST RAW MILK BURGERS $400 MAGA JOBS ANY DAY NOW 100% AMERICAN DEEP STATE FREEDOM MONEY BTC $94K';
 function seededRand(n){ let x=Math.sin(n*127.1)*43758.5453; return x-Math.floor(x); }
 function drawKillScreen(){
-  const CW=VW, CH=VH;
   // the thriving maze, life going on (rotated into the cabinet on phones)
   drawGameScene();
   // the scene corrupts into garbage built from the game's own propaganda
@@ -1994,7 +2038,6 @@ function drawKillScreen(){
 // The surprise ending: a bilingual reveal that every 50¢ went to the NAACP,
 // with the running total. Reached after the L10 kill-screen OR a normal game over.
 function drawFinalCard(){
-  const CW=VW, CH=VH;
   ctx.fillStyle='#000'; ctx.fillRect(0,0,CW,CH);
   const k = consoleMode ? 1.4 : 1;                 // larger type on phones
   const F=(px,bold)=> (bold?'bold ':'')+Math.round(px*k)+'px monospace';
@@ -2048,7 +2091,6 @@ function drawFinalCard(){
   ctx.restore();
 }
 function drawGameOver(){
-  const CW=VW, CH=VH;
   drawGameScene();
   ctx.fillStyle='rgba(0,0,0,0.85)'; ctx.fillRect(0,0,CW,CH);
   ctx.fillStyle='#FF4444'; ctx.font='bold 32px monospace'; ctx.textAlign='center';
@@ -2081,84 +2123,14 @@ function drawPlayfield(){
   }
   ctx.restore();
 }
-// Compact upright HUD for the portrait phone (the maze is rotated below it).
-function drawHUDPortrait(){
-  ctx.fillStyle='#0A0A14'; ctx.fillRect(0,0,VW,HB);
-  ctx.fillStyle='rgba(255,215,0,0.16)'; ctx.fillRect(0,HB-1,VW,1);
-  // left column — score / hiscore / level
-  ctx.textAlign='left';
-  ctx.fillStyle='#FFD700'; ctx.font='bold 15px monospace';
-  ctx.fillText(glitchText('SCORE',T('SCORE'))+': '+score,10,20);
-  ctx.fillStyle='#999'; ctx.font='10px monospace';
-  ctx.fillText(glitchText('HISCORE',T('HISCORE'))+': '+Math.max(hiScore,score),10,36);
-  ctx.fillStyle='#FFF'; ctx.font='bold 12px monospace';
-  ctx.fillText(glitchText('LEVEL',T('LEVEL'))+' '+level,10,53);
-  // goal + burger price
-  const goal=L().goal;
-  ctx.font='10px monospace'; ctx.fillStyle='#8899AA';
-  const gtxt = goal.type==='deports' ? glitchText('DEPORTED',T('DEPORTED'))+': '+levelDeports+'/'+goal.n
-             : goal.type==='survive' ? glitchText('SURVIVE',T('SURVIVE'))+': '+surviveLeft+'s' : '';
-  if(gtxt) ctx.fillText(gtxt,108,53);
-  if(burgerPrice>0){
-    const hot=burgerPrice>100;
-    ctx.fillStyle=hot?'#FF4444':'#FFB347'; ctx.font='bold 11px monospace';
-    ctx.fillText(glitchText('BURGER',T('BURGER'))+': $'+burgerPrice.toFixed(2),10,68);
-  }
-  // right column — BTC coin / stack / value / live chart
-  const crashed=level>=7;
-  drawBtcCoin(VW-150,18,11);
-  ctx.textAlign='left';
-  ctx.fillStyle=btcFlash>0&&Math.floor(btcFlash/8)%2===0?'#FFE082':'#F7931A';
-  ctx.font='bold 14px monospace';
-  ctx.fillText('×'+btcCount,VW-135,23);
-  ctx.textAlign='right'; ctx.font='bold 11px monospace';
-  ctx.fillStyle=crashed?'#FF3333':'#44DD44';
-  const stackVal=btcCount*btcPrice;
-  const shown= level===7&&famineFlags.crashed ? 6 : stackVal;
-  ctx.fillText(btcCount>0?fmtUSD(shown):fmtUSD(btcPrice),VW-10,40);
-  if(level<=7) drawBtcChart(VW-130,46,120,16);
-  // horizontal protein meter across the bottom of the band
-  const st=proteinState(), pct=pac?pac.protein/100:0;
-  const blink=st==='RENAL'&&Math.floor(tick/12)%2===0;
-  const meterCol= blink?'#FF2222' : st==='SKINNY'?'#FF9944' : st==='BUFF'?'#44DD44' : st==='SWOLE'?'#FFD700' : st==='FAT'?'#FFAA22' : st==='RENAL'?'#CC3333':'#666';
-  const bx=10, by=86, bw=VW-160, bh=12;
-  ctx.fillStyle='#181820'; ctx.fillRect(bx,by,bw,bh);
-  ctx.fillStyle=meterCol; ctx.fillRect(bx,by,bw*pct,bh);
-  ctx.strokeStyle='#333'; ctx.lineWidth=1;
-  [20,45,70,90].forEach(b=>{ const xx=bx+bw*b/100; ctx.beginPath(); ctx.moveTo(xx,by); ctx.lineTo(xx,by+bh); ctx.stroke(); });
-  ctx.strokeStyle='#555'; ctx.strokeRect(bx,by,bw,bh);
-  ctx.fillStyle='#8899AA'; ctx.font='bold 8px monospace'; ctx.textAlign='left';
-  ctx.fillText(glitchText('PROTEIN',T('PROTEIN')),bx,by-3);
-  ctx.fillStyle=meterCol; ctx.textAlign='right';
-  ctx.fillText(spanishRatio>=0.35?STATE_ES[st]:st, bx+bw, by-3);
-  // lives — confederate flags, right of the meter
-  ctx.fillStyle='#8899AA'; ctx.font='8px monospace'; ctx.textAlign='left';
-  ctx.fillText(glitchText('LIVES',T('LIVES')),VW-138,by-3);
-  for(let i=0;i<CONFIG.lives;i++){
-    const alive=i<lives || (i===lives&&pac&&pac.dead);
-    const tat=(i===lives&&pac&&pac.dead)?pac.deadAnim:0;
-    drawConfedFlag(VW-138+i*17, by, 14,9, alive, tat);
-  }
-}
-// Draw the playing field (+ HUD). On the portrait phone the landscape playfield
-// rect is rotated 90° clockwise into the tall canvas, beneath an upright HUD band.
+// Draw the playing field + HUD (no rotation — each layout is authored upright).
 function drawGameScene(){
-  if(consoleMode){
-    drawHUDPortrait();
-    ctx.save();
-    ctx.translate(SP+PF_SRC_H, HB);   // displayed top-left corner of the rotated block
-    ctx.rotate(Math.PI/2);            // +90° clockwise (matches the joystick remap)
-    ctx.translate(-SIDE,-HUDH);       // map the landscape playfield rect onto the origin
-    drawPlayfield();
-    ctx.restore();
-  } else {
-    drawPlayfield();
-    drawHUD();
-  }
+  drawPlayfield();
+  drawHUD();
 }
 function render(){
-  ctx.setTransform(RS,0,0,RS,0,0);   // map logical VW×VH space onto the HiDPI backing store
-  ctx.clearRect(0,0,VW,VH);
+  ctx.setTransform(RS,0,0,RS,0,0);   // map logical CW×CH space onto the HiDPI backing store
+  ctx.clearRect(0,0,CW,CH);
   if(gameState==='ATTRACT'){ drawAttract(); return; }
   if(gameState==='CARD'){ drawCard(); return; }
   if(gameState==='KILLSCREEN'){ drawKillScreen(); return; }
@@ -2167,12 +2139,12 @@ function render(){
   drawGameScene();
   if(readyTimer>0){
     ctx.fillStyle='#FFD700'; ctx.font='bold 18px monospace'; ctx.textAlign='center';
-    ctx.fillText(glitchText('READY',T('READY')), VW/2, consoleMode?HB+PF_SRC_W/2:TOP+GH/2+50);
+    ctx.fillText(glitchText('READY',T('READY')), CW/2, TOP+GH/2+50);
   }
   if(paused){
-    ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,VW,VH);
+    ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,CW,CH);
     ctx.fillStyle='#FFF'; ctx.font='bold 22px monospace'; ctx.textAlign='center';
-    ctx.fillText(T('PAUSE'),VW/2,VH/2);
+    ctx.fillText(T('PAUSE'),CW/2,CH/2);
   }
 }
 // ═════════════════════════════════════════════════════════════════
@@ -2378,16 +2350,12 @@ document.addEventListener('keydown',e=>{
 });
 
 // ── Touch controls (phones/tablets): swipe to steer, tap to start/advance ──
-// Set Pac's desired direction from a SCREEN-space intent (swipe delta or joystick
-// offset). On the portrait phone the playfield is rotated 90° clockwise, so a
-// screen direction S maps to the maze's logical axes as L = (S.y, -S.x).
+// Set Pac's desired direction from a screen-space intent (swipe delta or joystick
+// offset), snapped to a 4-way direction. No rotation: each layout is upright.
 function setPacDir(sx,sy){
   if(!(gameState==='PLAYING'&&!paused&&pac&&!pac.dead)) return;
-  let lx,ly;
-  if(Math.abs(sx)>Math.abs(sy)){ lx=sx>0?1:-1; ly=0; }   // snap to 4-way (screen space)
-  else { lx=0; ly=sy>0?1:-1; }
-  if(consoleMode){ const ox=lx; lx=ly; ly=-ox; }          // rotate(90deg) → logical axes
-  pac.pvx=lx; pac.pvy=ly;
+  if(Math.abs(sx)>Math.abs(sy)){ pac.pvx=sx>0?1:-1; pac.pvy=0; }
+  else { pac.pvx=0; pac.pvy=sy>0?1:-1; }
 }
 function steer(dx,dy){ setPacDir(dx,dy); }
 function tapAdvance(){
