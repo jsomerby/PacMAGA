@@ -547,7 +547,7 @@ const CONFIG = {
 // ═════════════════════════════════════════════════════════════════
 const CARDS = [ null,
  { t:'DRAIN THE MAZE', q:`"This maze is rigged against guys like me. Always has been. But I'm done coping. Time to drain it, one ghost at a time, and take my country back. Rise and grind."` },
- { t:"WE'RE SO BACK", q:`"Three ghosts down and I can already feel it. More room. More burgers. More America for Americans. They swore deporting them would tank the economy. Looks pretty good from where I'm chomping. We're so back."` },
+ { t:"WE'RE SO BACK", q:`"First ghosts out and I can already feel it. More room. More burgers. More America for Americans. They swore deporting them would tank the economy. Looks pretty good from where I'm chomping. We're so back."` },
  { t:'ANY DAY NOW', q:`"Swole is a mindset. Every ghost I push past that wall is a factory coming home. Any day now. Same energy as leg day. You build the wall, you build the body, you don't ask questions. Stay hard."` },
  { t:'TIRED OF WINNING YET?', q:`"Kinda weird the burger joints keep closing while we're winning this hard. Has to be the deep state. Fake closures. Whatever. Bulk season never ends and I am not tired of winning."` },
  { t:"IT'S CALLED BULKING", q:`"The scale doesn't measure freedom. I'm not fat, I'm a patriot in the offseason. Burger's twelve bucks now but who cares, Bitcoin's mooning and I'm rich in freedom money. Diamond hands. WAGMI."` },
@@ -1454,13 +1454,13 @@ function flagTileColor(c,r,mood){
     const base=_desatDim(PRIDE[i].slice(),mood.f*0.3,0);     // stays vivid
     return { base:_rgb(base), hi:_rgb(_lighten(base,18)) };
   }
-  let base; const ct=FLAG.canton;
+  let base, white=false; const ct=FLAG.canton;
   if(c===0||c===COLS-1||r===0||r===ROWS-1) base=[178,34,52];                 // outer border: all red
   else if(c>=ct.c0&&c<=ct.c1&&r>=ct.r0&&r<=ct.r1) base=[60,59,110];          // canton blue (top-left box)
   else { const band=Math.floor(((FLAG.axis==='v'?c:r)-2)/4);                 // 3-wide stripes (vertical on phones)
-         base=(band%2===0)?[178,34,52]:[235,235,238]; }
+         if(band%2===0){ base=[178,34,52]; } else { base=[196,198,208]; white=true; } } // muted off-white reads as a solid wall
   base=_desatDim(base,mood.f,mood.d);
-  return { base:_rgb(base), hi:_rgb(_lighten(base,16)) };
+  return { base:_rgb(base), hi:_rgb(_lighten(base, white?30:16)) };          // firmer bevel on the pale stripe
 }
 function drawWalls(){
   const mood=flagMood();
