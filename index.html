@@ -126,9 +126,11 @@ body.console{
   padding-top:calc(30vw + env(safe-area-inset-top));  /* full-width marquee logo */
   padding-bottom:calc(244px + env(safe-area-inset-bottom));
 }
-/* the game "screen" — a CRT behind a black bezel with a gold inner trim */
+/* the game "screen" — a CRT behind a black bezel with a gold inner trim.
+   On the portrait phone the canvas is a tall portrait surface (the maze is rotated
+   90° in-render, with an upright HUD band on top — see drawGameScene/fitCanvas). */
 body.console #gameCanvas{
-  position:relative; border-radius:14px;
+  position:relative; border-radius:14px; max-width:none; max-height:none;
   box-shadow:0 0 0 7px #07070b, 0 0 0 10px #2b2f3e, 0 0 0 12px rgba(255,215,0,0.45),
              0 14px 32px rgba(0,0,0,0.75), inset 0 0 34px rgba(0,0,0,0.8);
 }
@@ -371,11 +373,20 @@ body.shell #stick{ display:block; }
 // ═════════════════════════════════════════════════════════════════
 
 // ── Layout constants ──
-const TILE=24, COLS=23, ROWS=23;
-const GW=COLS*TILE, GH=ROWS*TILE;          // 552 × 552
+const TILE=24, COLS=27, ROWS=19;           // flag aspect (~1.4:1)
+const CENTER_C=COLS>>1, CENTER_R=ROWS>>1;  // 13, 9 — spawn + tunnel + ghost-gate column/row
+const GW=COLS*TILE, GH=ROWS*TILE;          // 648 × 456
 const SIDE=78, HUDH=58, STRIP=46, BOT=22;  // STRIP = visible land beyond the wall
 const TOP=HUDH+STRIP;                      // maze starts below HUD + deportation strip
 const CW=SIDE+GW, CH=TOP+GH+BOT;
+
+// ── Portrait-phone layout: the maze rotates 90° into a tall canvas, with an
+//    upright HUD band on top. PF_SRC is the landscape playfield rect (deportation
+//    strip + maze) that gets rotated; HB is the upright HUD band height. ──
+const PF_SRC_W=GW, PF_SRC_H=TOP+GH-HUDH;   // 744 × 454 (strip + maze)
+const HB=104, SP=8, SPB=10;                // hud-band height, side pad, bottom pad
+const PORT_W=SP+PF_SRC_H+SP;               // 470  → rotated maze width + pads
+const PORT_H=HB+PF_SRC_W+SPB;              // 858  → hud band + rotated maze height
 
 // ═════════════════════════════════════════════════════════════════
 //  CONFIG — every tunable in one place. The game's argument is math;
@@ -525,31 +536,27 @@ function T(key){
 //  MAZE — '#' wall, '.' path, letters = shop tiles (solid), 'o' pellet spots
 // ═════════════════════════════════════════════════════════════════
 const MAP_SRC = [
-'#######################',
-'#o...................o#',
-'#.#########.####.####.#',
-'#.#########.####.####.#',
-'#.#########...........#',
-'#.#########.AAA#.BBB#.#',
-'#.#########.AAA#.BBB#.#',
-'#.#########...........#',
-'#.#########.####.####.#',
-'#.#########.####.####.#',
-'#.....................#',
-'.......................',
-'#.CCC#.DDD#.####.EEE#.#',
-'#.CCC#.DDD#.####.EEE#.#',
-'#.....................#',
-'#.FFF#.####.####.GGG#.#',
-'#.FFF#.####.####.GGG#.#',
-'#.....................#',
-'#.####.HHH#.####.####.#',
-'#.####.HHH#.####.####.#',
-'#.....................#',
-'#o...................o#',
-'#######################',
+'###########################',
+'#o.......................o#',
+'#.###########.###.###.###.#',
+'#.###########.AAA.BBB.CCC.#',
+'#.###########.AAA.BBB.CCC.#',
+'#.###########.............#',
+'#.###########.###.###.###.#',
+'#.###########.###.###.###.#',
+'#.###########.###.###.###.#',
+'...........................',
+'#.DDD.EEE.###.###.FFF.###.#',
+'#.DDD.EEE.###.###.FFF.###.#',
+'#.###.###.###.###.###.###.#',
+'#.........................#',
+'#.###.###.###.###.###.###.#',
+'#.###.GGG.###.###.HHH.###.#',
+'#.###.GGG.###.###.HHH.###.#',
+'#o.......................o#',
+'###########################',
 ];
-const TUNNEL_ROW=11;       // side tunnels wrap to the opposite edge
+const TUNNEL_ROW=CENTER_R;  // side tunnels wrap to the opposite edge (center row)
 let mapData=[];            // 0 path, 1 wall, 2 shop tile
 let shopDefs={};           // id → {tiles:[{c,r}], cx,cy, frontTile}
 let pelletSpots=[];        // {c,r}
@@ -663,7 +670,7 @@ const STATE_ES={SKINNY:'FLACO', BUFF:'FORTACHÓN', SWOLE:'MUSCULOSO', FAT:'GORDO
 
 function makePac(){
   return {
-    x:px(11), y:py(11), vx:0, vy:0, pvx:0, pvy:0, facing:1,
+    x:px(CENTER_C), y:py(CENTER_R), vx:0, vy:0, pvx:0, pvy:0, facing:1,
     r:TILE*0.42, protein:10, withered:false,
     mouth:0.25, mouthDir:1,
     stumbleClock:0, stumbleLeft:0,
@@ -899,7 +906,7 @@ function spawnReturner(delay){
   const g=makeGhost({ speed:CONFIG.ghostBaseSpeed*L().ghostSpeed, state:'ENTER' });
   g.vivid=GHOST_VIVID[g.id%GHOST_VIVID.length];
   // appears on the far side of the wall and walks in through the breach
-  g.x=px(11)+(Math.random()-0.5)*120; g.y=HUDH+14; g.enterDelay=delay||0;
+  g.x=px(CENTER_C)+(Math.random()-0.5)*120; g.y=HUDH+14; g.enterDelay=delay||0;
   ghosts.push(g);
   return g;
 }
@@ -1030,9 +1037,9 @@ function updateGhosts(){
       case 'ENTER': { // L8+: cross the strip, then stream in through the breach
         if(g.enterDelay>0){ g.enterDelay--; break; }
         // converge on the breach first, then descend
-        if(Math.abs(g.x-px(11))>2 && g.y<TOP-10){ g.x+=Math.sign(px(11)-g.x)*1.2; }
+        if(Math.abs(g.x-px(CENTER_C))>2 && g.y<TOP-10){ g.x+=Math.sign(px(CENTER_C)-g.x)*1.2; }
         g.y+=1.4;
-        if(g.y>=py(1)){ g.y=py(1); g.x=px(11);
+        if(g.y>=py(1)){ g.y=py(1); g.x=px(CENTER_C);
           g.state='MIGRATE';
           g.chaseDelay=cfg.chase?240:0; // mill around before joining the hunt
           g.dir={x:Math.random()<0.5?1:-1,y:0};
@@ -1124,7 +1131,7 @@ function startLevel(n){
   if(n===6) pac.protein=92;            // RENAL by design
   if(n===5) pac.protein=78;            // FAT by design
   if(n===4&&pac.protein<60) pac.protein=62;
-  if(n>=8){ pac.y=py(21); }            // start at the bottom, away from the breach
+  if(n>=8){ pac.y=py(ROWS-2); }        // start at the bottom, away from the breach
   // supplements
   const spots=pelletSpots.slice(0,cfg.pellets||0);
   pellets=spots.map((t,i)=>({x:px(t.c),y:py(t.r),active:true,label:PELLET_LABELS[i%PELLET_LABELS.length]}));
@@ -1292,9 +1299,9 @@ const ctx=canvas.getContext('2d');
 let RS=Math.min(window.devicePixelRatio||1, 2);
 let consoleMode=false;   // portrait phone → arcade-cabinet shell (logo + joystick)
 let isPhone=false;       // touch device with a phone-sized screen (NOT desktop/tablet)
+let VW=CW, VH=CH;        // active logical canvas size (portrait in console mode)
 function fitCanvas(){
   RS=Math.min(window.devicePixelRatio||1, 2);
-  canvas.width=Math.round(CW*RS); canvas.height=Math.round(CH*RS);
   const vw=window.innerWidth, vh=window.innerHeight;
   const coarse=('ontouchstart' in window)||(navigator.maxTouchPoints>0)||
                (window.matchMedia&&matchMedia('(pointer:coarse)').matches);
@@ -1303,6 +1310,11 @@ function fitCanvas(){
   isPhone = window.__forceConsole || (coarse && Math.min(vw,vh)<=540);
   consoleMode = isPhone && vh>=vw;               // cabinet shows only held vertically
   document.body.classList.toggle('console', consoleMode);
+  // Portrait phone uses a tall canvas (maze rotated in-render); everyone else landscape.
+  VW = consoleMode ? PORT_W : CW;
+  VH = consoleMode ? PORT_H : CH;
+  canvas.width=Math.round(VW*RS); canvas.height=Math.round(VH*RS);
+  canvas.style.transform='';
   document.body.style.paddingTop=''; document.body.style.paddingBottom='';
   let availW=vw, availH=vh;
   if(consoleMode){
@@ -1312,9 +1324,9 @@ function fitCanvas(){
     availH = vh - (parseFloat(cs.paddingTop)||0) - (parseFloat(cs.paddingBottom)||0);
     availW = vw - 16;
   }
-  const scale=Math.min(availW/CW, availH/CH);     // largest aspect-preserving fit
-  canvas.style.width=Math.round(CW*scale)+'px';
-  canvas.style.height=Math.round(CH*scale)+'px';
+  const scale=Math.min(availW/VW, availH/VH);      // largest aspect-preserving fit
+  canvas.style.width=Math.round(VW*scale)+'px';
+  canvas.style.height=Math.round(VH*scale)+'px';
 }
 fitCanvas();
 window.addEventListener('resize', fitCanvas);
@@ -1331,9 +1343,9 @@ const PALETTES={
 function pal(){ return PALETTES[L().palette]||PALETTES.bright; }
 
 // ── Flag maze: the walls render as a simplified Stars & Stripes ──
-// Blue canton (top-left) + 8 red/white horizontal stripes. Colors desaturate
-// with the level palette so the flag fades as the country collapses.
-const FLAG_CANTON_C=11, FLAG_CANTON_R=11, FLAG_STRIPE_H=3;
+// Blue canton (top-left, cols 2–12 × rows 2–8) with white boxes + uniform 3-tall
+// red/white stripe bands + an all-red outer border. Colors desaturate with the
+// level palette so the flag fades as the country collapses. Rotated 90° on phones.
 function _desatDim(rgb,f,d){ const g=0.3*rgb[0]+0.59*rgb[1]+0.11*rgb[2];
   return rgb.map(v=>(v+(g-v)*f)*(1-d)); }
 function _lighten(rgb,a){ return rgb.map(v=>Math.min(255,v+a)); }
@@ -1343,8 +1355,9 @@ function flagMood(){ const n=L().palette;
            d:(n==='dead'?0.32:n==='gray'?0.12:0) }; }
 function flagTileColor(c,r,mood){
   let base;
-  if(c>=2&&c<=10&&r>=2&&r<=9) base=[60,59,110];                             // canton blue (the box)
-  else { const band=Math.max(0,Math.floor((r-2)/3)); base=(band%2===0)?[178,34,52]:[235,235,238]; } // stripes
+  if(c===0||c===COLS-1||r===0||r===ROWS-1) base=[178,34,52];                 // outer border: all red
+  else if(c>=2&&c<=12&&r>=2&&r<=8) base=[60,59,110];                         // canton blue (the box, top-left)
+  else { const band=Math.floor((r-2)/4); base=(band%2===0)?[178,34,52]:[235,235,238]; } // uniform 3-tall red/white stripes
   base=_desatDim(base,mood.f,mood.d);
   return { base:_rgb(base), hi:_rgb(_lighten(base,16)) };
 }
@@ -1361,13 +1374,13 @@ function drawWalls(){
     ctx.fillStyle=t.hi;   ctx.fillRect(x+1,y+1,TILE-2,TILE-2);
     ctx.fillStyle=t.base; ctx.fillRect(x+3,y+3,TILE-6,TILE-6);
   }
-  // white stars scattered across the canton
-  const sv=_desatDim([242,242,247],mood.f,mood.d);
-  ctx.fillStyle=_rgb(sv); ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.font='bold 13px Georgia,"Times New Roman",serif';
-  const sx=[SIDE+84,SIDE+156,SIDE+228], sy=[TOP+108,TOP+180];
-  for(const yy of sy) for(const xx of sx) ctx.fillText('★',xx,yy);
-  ctx.textBaseline='alphabetic';
+  // white boxes regularly interspersed across the blue canton — alludes to the star field
+  const sv=_desatDim([240,240,245],mood.f,mood.d);
+  ctx.fillStyle=_rgb(sv);
+  const bs=Math.round(TILE*0.42);
+  for(let r=3;r<=7;r+=2) for(let c=3;c<=11;c+=2){
+    ctx.fillRect(SIDE+px(c)-bs/2, py(r)-bs/2, bs, bs);
+  }
   // Border wall at top — the wall ghosts get launched over
   ctx.fillStyle= level>=8 ? '#6B4B3A':'#8A8A92';
   ctx.fillRect(SIDE,TOP-6,GW,8);
@@ -1378,7 +1391,7 @@ function drawWalls(){
     }
   } else { // the breach
     const bw=Math.min(70,breachAnim*1.2+30);
-    const bx=SIDE+px(11)-bw/2;
+    const bx=SIDE+px(CENTER_C)-bw/2;
     ctx.fillStyle=pal().bg; ctx.fillRect(bx,TOP-8,bw,12);
     ctx.strokeStyle='#553322'; ctx.lineWidth=2;
     ctx.beginPath();
@@ -1686,7 +1699,9 @@ function drawPacSprite(x,y,st,facing,mouth,deadAnim){
   ctx.fillStyle=hatRed;
   ctx.beginPath(); ctx.arc(0,0,r*0.62,Math.PI,0); ctx.closePath(); ctx.fill();
   if(r>4){ ctx.fillStyle='#FFF'; ctx.fillRect(0,-r*0.15,r*0.62,r*0.13); }
-  ctx.fillStyle=hatRed; ctx.fillRect(-r*0.62,0,r*1.5,r*0.11);
+  // brim — a touch thicker + longer, with a shaded underside so it stands out from the dome
+  ctx.fillStyle=hatRed; ctx.fillRect(-r*0.62,0,r*1.9,r*0.17);
+  if(r>4){ ctx.fillStyle='#9E1B1B'; ctx.fillRect(-r*0.62,r*0.12,r*1.9,r*0.05); }
   ctx.restore();
   ctx.globalAlpha=1;
   ctx.restore();
@@ -1744,6 +1759,48 @@ function glitchText(key,txt){
   }
   return txt;
 }
+// gold ₿ coin (shared by landscape + portrait HUD)
+function drawBtcCoin(cx2,cy2,cr){
+  const crashed=level>=7;
+  ctx.save(); ctx.translate(cx2,cy2);
+  if(btcFlash>0) ctx.scale(Math.abs(Math.cos(btcFlash*0.25))*0.85+0.15,1);   // flip wobble
+  const grad=ctx.createRadialGradient(-3,-3,2,0,0,cr+2);
+  grad.addColorStop(0,'#FFE44D'); grad.addColorStop(1, crashed?'#7A5A18':'#E8941A');
+  ctx.fillStyle=grad;
+  ctx.beginPath(); ctx.arc(0,0,cr,0,7); ctx.fill();
+  ctx.strokeStyle=crashed?'#5A4210':'#AA7700'; ctx.lineWidth=2; ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,0.45)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.arc(0,0,cr-3,0,7); ctx.stroke();
+  ctx.fillStyle=crashed?'#3A2E10':'#7A4A00';
+  ctx.font='bold '+Math.round(cr*1.27)+'px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('₿',0.5,1);
+  ctx.textBaseline='alphabetic';
+  ctx.restore();
+}
+// live candlestick tape of the BTC price (shared by landscape + portrait HUD)
+function drawBtcChart(sx,sy,sw,sh){
+  const list = btcForming ? btcCandles.concat([btcForming]) : btcCandles;
+  if(!list.length) return;
+  ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.fillRect(sx,sy,sw,sh);
+  ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.lineWidth=1; ctx.strokeRect(sx+0.5,sy+0.5,sw-1,sh-1);
+  let mn=Infinity,mx=-Infinity;
+  for(const k of list){ if(k.l<mn)mn=k.l; if(k.h>mx)mx=k.h; }
+  if(mx-mn<0.01) mx=mn+0.01;
+  const pad=(mx-mn)*0.08; mn-=pad; mx+=pad;          // headroom so wicks don't clip
+  const Y=v=>sy+sh-((v-mn)/(mx-mn))*(sh-2)-1;
+  const n=list.length, cw=sw/n, UP='#26A69A', DN='#EF5350';
+  const cur=list[list.length-1].c;
+  ctx.setLineDash([2,2]); ctx.strokeStyle='rgba(255,235,140,0.45)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(sx,Math.round(Y(cur))+0.5); ctx.lineTo(sx+sw,Math.round(Y(cur))+0.5); ctx.stroke();
+  ctx.setLineDash([]);
+  for(let i=0;i<n;i++){
+    const k=list[i], cx=Math.round(sx+i*cw+cw/2)+0.5, up=k.c>=k.o, col=up?UP:DN;
+    ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(cx,Y(k.h)); ctx.lineTo(cx,Y(k.l)); ctx.stroke();   // wick
+    const bw=Math.max(2,Math.floor(cw*0.66)), yo=Y(k.o), yc=Y(k.c);                 // body
+    ctx.fillRect(Math.round(cx-bw/2), Math.min(yo,yc), bw, Math.max(1,Math.abs(yc-yo)));
+  }
+}
 function drawHUD(){
   // top bar
   ctx.fillStyle='#0A0A14'; ctx.fillRect(0,0,CW,HUDH);
@@ -1770,24 +1827,7 @@ function drawHUD(){
   // BTC — top-right: an unmistakable gold coin with the ₿ mark
   const stackVal=btcCount*btcPrice;
   const crashed=level>=7;
-  {
-    const cx2=CW-66, cy2=16, cr=11;
-    ctx.save(); ctx.translate(cx2,cy2);
-    // coin-flip wobble when a new BTC lands
-    if(btcFlash>0) ctx.scale(Math.abs(Math.cos(btcFlash*0.25))*0.85+0.15,1);
-    const grad=ctx.createRadialGradient(-3,-3,2,0,0,cr+2);
-    grad.addColorStop(0,'#FFE44D'); grad.addColorStop(1, crashed?'#7A5A18':'#E8941A');
-    ctx.fillStyle=grad;
-    ctx.beginPath(); ctx.arc(0,0,cr,0,7); ctx.fill();
-    ctx.strokeStyle=crashed?'#5A4210':'#AA7700'; ctx.lineWidth=2; ctx.stroke();
-    ctx.strokeStyle='rgba(255,255,255,0.45)'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.arc(0,0,cr-3,0,7); ctx.stroke();
-    ctx.fillStyle=crashed?'#3A2E10':'#7A4A00';
-    ctx.font='bold 14px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('₿',0.5,1);
-    ctx.textBaseline='alphabetic';
-    ctx.restore();
-  }
+  drawBtcCoin(CW-66,16,11);
   ctx.textAlign='left';
   ctx.fillStyle=btcFlash>0&&Math.floor(btcFlash/8)%2===0?'#FFE082':'#F7931A';
   ctx.font='bold 15px monospace';
@@ -1798,30 +1838,7 @@ function drawHUD(){
   const shown= level===7&&famineFlags.crashed ? 6 : stackVal;
   ctx.fillText(btcCount>0?fmtUSD(shown):fmtUSD(btcPrice),CW-8,38);
   // live candlestick chart of the BTC tape (levels 1–7) — TradingView 15m style
-  if(level<=7 && (btcCandles.length||btcForming)){
-    const sx=CW-120, sy=40, sw=114, sh=16;
-    ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.fillRect(sx,sy,sw,sh);
-    ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.lineWidth=1; ctx.strokeRect(sx+0.5,sy+0.5,sw-1,sh-1);
-    const list = btcForming ? btcCandles.concat([btcForming]) : btcCandles;
-    let mn=Infinity,mx=-Infinity;
-    for(const k of list){ if(k.l<mn)mn=k.l; if(k.h>mx)mx=k.h; }
-    if(mx-mn<0.01) mx=mn+0.01;
-    const pad=(mx-mn)*0.08; mn-=pad; mx+=pad;          // headroom so wicks don't clip
-    const Y=v=>sy+sh-((v-mn)/(mx-mn))*(sh-2)-1;
-    const n=list.length, cw=sw/n, UP='#26A69A', DN='#EF5350';
-    // dashed "current price" line, like a live chart
-    const cur=list[list.length-1].c;
-    ctx.setLineDash([2,2]); ctx.strokeStyle='rgba(255,235,140,0.45)'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(sx,Math.round(Y(cur))+0.5); ctx.lineTo(sx+sw,Math.round(Y(cur))+0.5); ctx.stroke();
-    ctx.setLineDash([]);
-    for(let i=0;i<n;i++){
-      const k=list[i], cx=Math.round(sx+i*cw+cw/2)+0.5, up=k.c>=k.o, col=up?UP:DN;
-      ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(cx,Y(k.h)); ctx.lineTo(cx,Y(k.l)); ctx.stroke();   // wick
-      const bw=Math.max(2,Math.floor(cw*0.66)), yo=Y(k.o), yc=Y(k.c);                 // body
-      ctx.fillRect(Math.round(cx-bw/2), Math.min(yo,yc), bw, Math.max(1,Math.abs(yc-yo)));
-    }
-  }
+  if(level<=7) drawBtcChart(CW-120,40,114,16);
   // ── left sidebar: vertical protein meter ──
   ctx.fillStyle='#0A0A14'; ctx.fillRect(0,HUDH,SIDE,CH-HUDH);
   const mw=22, mh=GH-120, mx=(SIDE-mw)/2, my=TOP+14;
@@ -1873,6 +1890,7 @@ function wrapText(txt,maxW,font){
   return lines;
 }
 function drawCard(){
+  const CW=VW, CH=VH;                 // center on the active canvas (portrait on phones)
   ctx.fillStyle='#000005'; ctx.fillRect(0,0,CW,CH);
   ctx.save(); ctx.globalAlpha=cardAlpha;
   const card=CARDS[level];
@@ -1914,6 +1932,7 @@ function drawCard(){
   ctx.restore();
 }
 function drawAttract(){
+  const CW=VW, CH=VH;
   ctx.fillStyle='#000011'; ctx.fillRect(0,0,CW,CH);
   for(let i=0;i<70;i++){
     const sx=(i*137+tick*0.3)%CW, sy=(i*97)%CH;
@@ -1949,11 +1968,11 @@ function drawAttract(){
 const PROPAGANDA='NOW HIRING WINNING PRE-WORKOUT TEST BOOST RAW MILK BURGERS $400 MAGA JOBS ANY DAY NOW 100% AMERICAN DEEP STATE FREEDOM MONEY BTC $94K';
 function seededRand(n){ let x=Math.sin(n*127.1)*43758.5453; return x-Math.floor(x); }
 function drawKillScreen(){
-  // left half: the thriving maze, life going on
-  drawPlayfield();
-  drawHUD();
-  // right half corrupts into garbage built from the game's own propaganda
-  const startX=Math.max(SIDE,CW-Math.min(CW/2, killScreenT*4));
+  const CW=VW, CH=VH;
+  // the thriving maze, life going on (rotated into the cabinet on phones)
+  drawGameScene();
+  // the scene corrupts into garbage built from the game's own propaganda
+  const startX=Math.max(0,CW-Math.min(CW*0.62, killScreenT*4));
   for(let y=0;y<CH;y+=10){
     for(let x=startX;x<CW;x+=14){
       const n=(x*31+y*17+Math.floor(killScreenT/8)*7);
@@ -1975,6 +1994,7 @@ function drawKillScreen(){
 // The surprise ending: a bilingual reveal that every 50¢ went to the NAACP,
 // with the running total. Reached after the L10 kill-screen OR a normal game over.
 function drawFinalCard(){
+  const CW=VW, CH=VH;
   ctx.fillStyle='#000'; ctx.fillRect(0,0,CW,CH);
   const k = consoleMode ? 1.4 : 1;                 // larger type on phones
   const F=(px,bold)=> (bold?'bold ':'')+Math.round(px*k)+'px monospace';
@@ -2028,7 +2048,8 @@ function drawFinalCard(){
   ctx.restore();
 }
 function drawGameOver(){
-  drawPlayfield(); drawHUD();
+  const CW=VW, CH=VH;
+  drawGameScene();
   ctx.fillStyle='rgba(0,0,0,0.85)'; ctx.fillRect(0,0,CW,CH);
   ctx.fillStyle='#FF4444'; ctx.font='bold 32px monospace'; ctx.textAlign='center';
   ctx.fillText(T('GAMEOVER'),CW/2,CH/2-40);
@@ -2060,24 +2081,98 @@ function drawPlayfield(){
   }
   ctx.restore();
 }
+// Compact upright HUD for the portrait phone (the maze is rotated below it).
+function drawHUDPortrait(){
+  ctx.fillStyle='#0A0A14'; ctx.fillRect(0,0,VW,HB);
+  ctx.fillStyle='rgba(255,215,0,0.16)'; ctx.fillRect(0,HB-1,VW,1);
+  // left column — score / hiscore / level
+  ctx.textAlign='left';
+  ctx.fillStyle='#FFD700'; ctx.font='bold 15px monospace';
+  ctx.fillText(glitchText('SCORE',T('SCORE'))+': '+score,10,20);
+  ctx.fillStyle='#999'; ctx.font='10px monospace';
+  ctx.fillText(glitchText('HISCORE',T('HISCORE'))+': '+Math.max(hiScore,score),10,36);
+  ctx.fillStyle='#FFF'; ctx.font='bold 12px monospace';
+  ctx.fillText(glitchText('LEVEL',T('LEVEL'))+' '+level,10,53);
+  // goal + burger price
+  const goal=L().goal;
+  ctx.font='10px monospace'; ctx.fillStyle='#8899AA';
+  const gtxt = goal.type==='deports' ? glitchText('DEPORTED',T('DEPORTED'))+': '+levelDeports+'/'+goal.n
+             : goal.type==='survive' ? glitchText('SURVIVE',T('SURVIVE'))+': '+surviveLeft+'s' : '';
+  if(gtxt) ctx.fillText(gtxt,108,53);
+  if(burgerPrice>0){
+    const hot=burgerPrice>100;
+    ctx.fillStyle=hot?'#FF4444':'#FFB347'; ctx.font='bold 11px monospace';
+    ctx.fillText(glitchText('BURGER',T('BURGER'))+': $'+burgerPrice.toFixed(2),10,68);
+  }
+  // right column — BTC coin / stack / value / live chart
+  const crashed=level>=7;
+  drawBtcCoin(VW-150,18,11);
+  ctx.textAlign='left';
+  ctx.fillStyle=btcFlash>0&&Math.floor(btcFlash/8)%2===0?'#FFE082':'#F7931A';
+  ctx.font='bold 14px monospace';
+  ctx.fillText('×'+btcCount,VW-135,23);
+  ctx.textAlign='right'; ctx.font='bold 11px monospace';
+  ctx.fillStyle=crashed?'#FF3333':'#44DD44';
+  const stackVal=btcCount*btcPrice;
+  const shown= level===7&&famineFlags.crashed ? 6 : stackVal;
+  ctx.fillText(btcCount>0?fmtUSD(shown):fmtUSD(btcPrice),VW-10,40);
+  if(level<=7) drawBtcChart(VW-130,46,120,16);
+  // horizontal protein meter across the bottom of the band
+  const st=proteinState(), pct=pac?pac.protein/100:0;
+  const blink=st==='RENAL'&&Math.floor(tick/12)%2===0;
+  const meterCol= blink?'#FF2222' : st==='SKINNY'?'#FF9944' : st==='BUFF'?'#44DD44' : st==='SWOLE'?'#FFD700' : st==='FAT'?'#FFAA22' : st==='RENAL'?'#CC3333':'#666';
+  const bx=10, by=86, bw=VW-160, bh=12;
+  ctx.fillStyle='#181820'; ctx.fillRect(bx,by,bw,bh);
+  ctx.fillStyle=meterCol; ctx.fillRect(bx,by,bw*pct,bh);
+  ctx.strokeStyle='#333'; ctx.lineWidth=1;
+  [20,45,70,90].forEach(b=>{ const xx=bx+bw*b/100; ctx.beginPath(); ctx.moveTo(xx,by); ctx.lineTo(xx,by+bh); ctx.stroke(); });
+  ctx.strokeStyle='#555'; ctx.strokeRect(bx,by,bw,bh);
+  ctx.fillStyle='#8899AA'; ctx.font='bold 8px monospace'; ctx.textAlign='left';
+  ctx.fillText(glitchText('PROTEIN',T('PROTEIN')),bx,by-3);
+  ctx.fillStyle=meterCol; ctx.textAlign='right';
+  ctx.fillText(spanishRatio>=0.35?STATE_ES[st]:st, bx+bw, by-3);
+  // lives — confederate flags, right of the meter
+  ctx.fillStyle='#8899AA'; ctx.font='8px monospace'; ctx.textAlign='left';
+  ctx.fillText(glitchText('LIVES',T('LIVES')),VW-138,by-3);
+  for(let i=0;i<CONFIG.lives;i++){
+    const alive=i<lives || (i===lives&&pac&&pac.dead);
+    const tat=(i===lives&&pac&&pac.dead)?pac.deadAnim:0;
+    drawConfedFlag(VW-138+i*17, by, 14,9, alive, tat);
+  }
+}
+// Draw the playing field (+ HUD). On the portrait phone the landscape playfield
+// rect is rotated 90° clockwise into the tall canvas, beneath an upright HUD band.
+function drawGameScene(){
+  if(consoleMode){
+    drawHUDPortrait();
+    ctx.save();
+    ctx.translate(SP+PF_SRC_H, HB);   // displayed top-left corner of the rotated block
+    ctx.rotate(Math.PI/2);            // +90° clockwise (matches the joystick remap)
+    ctx.translate(-SIDE,-HUDH);       // map the landscape playfield rect onto the origin
+    drawPlayfield();
+    ctx.restore();
+  } else {
+    drawPlayfield();
+    drawHUD();
+  }
+}
 function render(){
-  ctx.setTransform(RS,0,0,RS,0,0);   // map logical CW×CH space onto the HiDPI backing store
-  ctx.clearRect(0,0,CW,CH);
+  ctx.setTransform(RS,0,0,RS,0,0);   // map logical VW×VH space onto the HiDPI backing store
+  ctx.clearRect(0,0,VW,VH);
   if(gameState==='ATTRACT'){ drawAttract(); return; }
   if(gameState==='CARD'){ drawCard(); return; }
   if(gameState==='KILLSCREEN'){ drawKillScreen(); return; }
   if(gameState==='FINALCARD'){ drawFinalCard(); return; }
   if(gameState==='GAMEOVER'){ drawGameOver(); return; }
-  drawPlayfield();
-  drawHUD();
+  drawGameScene();
   if(readyTimer>0){
     ctx.fillStyle='#FFD700'; ctx.font='bold 18px monospace'; ctx.textAlign='center';
-    ctx.fillText(glitchText('READY',T('READY')),CW/2,TOP+GH/2+50);
+    ctx.fillText(glitchText('READY',T('READY')), VW/2, consoleMode?HB+PF_SRC_W/2:TOP+GH/2+50);
   }
   if(paused){
-    ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,CW,CH);
+    ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,VW,VH);
     ctx.fillStyle='#FFF'; ctx.font='bold 22px monospace'; ctx.textAlign='center';
-    ctx.fillText(T('PAUSE'),CW/2,CH/2);
+    ctx.fillText(T('PAUSE'),VW/2,VH/2);
   }
 }
 // ═════════════════════════════════════════════════════════════════
@@ -2283,12 +2378,18 @@ document.addEventListener('keydown',e=>{
 });
 
 // ── Touch controls (phones/tablets): swipe to steer, tap to start/advance ──
-function steer(dx,dy){
-  if(gameState==='PLAYING'&&!paused&&pac&&!pac.dead){
-    if(Math.abs(dx)>Math.abs(dy)){ pac.pvx=dx>0?1:-1; pac.pvy=0; }
-    else { pac.pvx=0; pac.pvy=dy>0?1:-1; }
-  }
+// Set Pac's desired direction from a SCREEN-space intent (swipe delta or joystick
+// offset). On the portrait phone the playfield is rotated 90° clockwise, so a
+// screen direction S maps to the maze's logical axes as L = (S.y, -S.x).
+function setPacDir(sx,sy){
+  if(!(gameState==='PLAYING'&&!paused&&pac&&!pac.dead)) return;
+  let lx,ly;
+  if(Math.abs(sx)>Math.abs(sy)){ lx=sx>0?1:-1; ly=0; }   // snap to 4-way (screen space)
+  else { lx=0; ly=sy>0?1:-1; }
+  if(consoleMode){ const ox=lx; lx=ly; ly=-ox; }          // rotate(90deg) → logical axes
+  pac.pvx=lx; pac.pvy=ly;
 }
+function steer(dx,dy){ setPacDir(dx,dy); }
 function tapAdvance(){
   if(gameState==='ATTRACT'){ resetGame(); startLevel(1); return; }
   if(gameState==='CARD'){ if(cardDone||cardTimer>30){ gameState='PLAYING'; readyTimer=80; startLevelMusic(); } return; }
@@ -2342,10 +2443,7 @@ function stickSet(clientX,clientY){
   const maxR=r.width/2 - stickNub.offsetWidth/2;
   const s=mag>maxR?maxR/mag:1;                       // clamp the nub inside the base
   stickNub.style.transform='translate('+(dx*s).toFixed(1)+'px,'+(dy*s).toFixed(1)+'px)';
-  if(mag>14 && gameState==='PLAYING' && !paused && pac && !pac.dead){
-    if(Math.abs(dx)>Math.abs(dy)){ pac.pvx=dx>0?1:-1; pac.pvy=0; }   // snap to 4-way
-    else { pac.pvx=0; pac.pvy=dy>0?1:-1; }
-  }
+  if(mag>14) setPacDir(dx,dy);     // screen-space intent; remapped for rotation inside
 }
 function stickEnd(){ stickActive=false; if(stickNub){ stickNub.style.transform='translate(0,0)'; stickNub.classList.remove('grab'); } }
 if(stick){
