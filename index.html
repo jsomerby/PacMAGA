@@ -552,7 +552,7 @@ const CARDS = [ null,
  { t:'TIRED OF WINNING YET?', q:`"Kinda weird the burger joints keep closing while we're winning this hard. Has to be the deep state. Fake closures. Whatever. Bulk season never ends and I am not tired of winning."` },
  { t:"IT'S CALLED BULKING", q:`"The scale doesn't measure freedom. I'm not fat, I'm a patriot in the offseason. Burger's twelve bucks now but who cares, Bitcoin's mooning and I'm rich in freedom money. Diamond hands. WAGMI."` },
  { t:'MY ORGANS WENT WOKE', q:`"Doc says my kidneys are shutting down. Typical. Even my organs went woke on me. I did my own research, he's wrong. Couple ghosts left on the whole map. Push through. Embrace the suck."` },
- { t:'MISSION ACCOMPLISHED', q:`"Did it. Every ghost gone. One hundred percent American maze. Burgers are four hundred bucks but I'm loaded, hold on. Bitcoin's six dollars? My whole stack is worth six dollars? Who do I even sell to. There's nobody left."` },
+ { t:'MISSION ACCOMPLISHED', q:`"Did it. Every ghost gone. One hundred percent American maze. Weird that a burger's four hundred bucks now — has to be the deep state. And the elites are tanking Bitcoin to keep guys like me down. Diamond hands, though. Gotta HODL. How else do I fund the tradwife?"` },
  { t:'THEY BROUGHT TACOS', q:`"The wall broke. They poured back in and they brought tacos. Every sign says ABIERTO. They're not running from me. They're not scared of me. Why isn't anybody scared of me."` },
  { t:'RUN', t_es:'CORRE', q:`"Everything's in Spanish now. The music's wrong, the flags are wrong, the whole maze is wrong. I grab a taco and run and there's always more of them. This was supposed to be MY maze."` },
  { t:'FIN DEL JUEGO, AMIGO', q:`...` },
@@ -921,10 +921,11 @@ function updateShops(){
       continue;
     }
     if(!s.open) continue;
-    // staffed shop produces burgers; deport all staff → permanently dark
+    // staffed shop produces burgers; deporting all staff shutters it — but only from
+    // L3 on. In L1-2 the joint just goes short-staffed (HELP WANTED) and stays open.
     if(shopStaffAlive(s)===0 && s.staff.length>0){
-      s.open=false; s.justClosed=tick; sfxShopClose();
-      continue;
+      if(level>=3){ s.open=false; s.justClosed=tick; sfxShopClose(); continue; }
+      s.understaffed=true;
     }
     s.spawnClock+=cfg.spawnRate;
     if(s.spawnClock>=140){
@@ -1585,6 +1586,12 @@ function drawShops(){
       // OPEN sign in corner of window
       ctx.fillStyle='#33DD55'; ctx.font='bold 6px monospace'; ctx.textAlign='left';
       if(lit) ctx.fillText(T('OPEN'),x+8,y+28);
+      if(s.understaffed){ // open but short-staffed (early levels) → HELP WANTED placard
+        ctx.fillStyle='#E8E0C8'; ctx.fillRect(x+w/2-27,y+h-13,54,11);
+        ctx.strokeStyle='#AA8855'; ctx.lineWidth=0.8; ctx.strokeRect(x+w/2-27,y+h-13,54,11);
+        ctx.fillStyle='#993311'; ctx.font='bold 7px monospace'; ctx.textAlign='center';
+        ctx.fillText(T('HELPWANTED'),x+w/2,y+h-5);
+      }
     } else {
       // dark / boarded — HELP WANTED
       ctx.fillStyle='#1C1C1E'; ctx.fillRect(x,y,w,h);
