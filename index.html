@@ -6,7 +6,33 @@
 <meta name="theme-color" content="#000000">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>PacMAGA</title>
+<title>PacMAGA — Make the Maze Great Again</title>
+<meta name="description" content="A free satirical arcade maze game. Deport the ghosts, drain the swamp, HODL your Bitcoin, and eat your way to greatness. Play free in English y español.">
+<link rel="canonical" href="https://pacmagaman.com/">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://pacmagaman.com/">
+<meta property="og:site_name" content="PacMAGA">
+<meta property="og:title" content="PacMAGA — Make the Maze Great Again">
+<meta property="og:description" content="A free satirical arcade maze game. Deport the ghosts, drain the swamp, HODL your Bitcoin, and eat your way to greatness. Play free in English y español.">
+<meta property="og:image" content="https://pacmagaman.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="PacMAGA logo above Che Guevara punching Trump, in pixel art">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="PacMAGA — Make the Maze Great Again">
+<meta name="twitter:description" content="A free satirical arcade maze game. Deport the ghosts, drain the swamp, HODL your Bitcoin, and eat your way to greatness. Play free in English y español.">
+<meta name="twitter:image" content="https://pacmagaman.com/og-image.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"VideoGame","name":"PacMAGA",
+"url":"https://pacmagaman.com/","image":"https://pacmagaman.com/og-image.png",
+"description":"A free satirical arcade maze game. Deport the ghosts, drain the swamp, HODL your Bitcoin, and eat your way to greatness. Play free in English y español.",
+"genre":["Arcade","Satire"],"playMode":"SinglePlayer",
+"gamePlatform":["Web browser","Mobile"],"inLanguage":["en","es"],
+"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
+</script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -259,6 +285,14 @@ body.lefty #handToggle .ht-sw::after{ left:12.5px; background:#fff; }
 </style>
 </head>
 <body>
+<noscript>
+  <div style="color:#FFD700;background:#000;font-family:monospace;padding:2em;text-align:center">
+    <h1>PacMAGA — Make the Maze Great Again</h1>
+    <p>A free satirical arcade maze game. Deport the ghosts, drain the swamp, HODL your
+    Bitcoin, and eat your way to greatness — across ten escalating levels, in English y
+    español. PacMAGA needs JavaScript to run; please enable it and reload.</p>
+  </div>
+</noscript>
 <canvas id="gameCanvas"></canvas>
 
 <!-- Portrait arcade-cabinet shell (touch + portrait): marquee + control deck -->
